@@ -1,0 +1,39 @@
+[tessdata_best_eng]
+git-tree-sha1 = "752f60d987df86cc91b505936601cdb1988406f8"
+lazy = true
+
+    [[tessdata_best_eng.download]]
+    sha256 = "b581ba301cab91202cb48bb835e0f03fc0ec686ff27e5000786b3300e6c626aa"
+    url = "https://github.com/ericphanson/PDFSandwich.jl/releases/download/traineddata/tessdata_best_eng.tar.gz"
+
+[tessdata_eng]
+git-tree-sha1 = "a4d4f5c70bb594ea4e3028fc9b0fcd83c692bbaa"
+lazy = true
+
+    [[tessdata_eng.download]]
+    sha256 = "218059fc6e022335956b502899ec1046a1b3e6760de2d37ae97ef99597ce0458"
+    url = "https://github.com/ericphanson/PDFSandwich.jl/releases/download/traineddata/tessdata_eng.tar.gz"
+
+[tessdata_equ]
+git-tree-sha1 = "29a0eb031595d0f865e16efc4475976dd3b15456"
+lazy = true
+
+    [[tessdata_equ.download]]
+    sha256 = "748e6b0f043ab5c3c67b410cc9fef696b0e4d33a201589df0487d20ddcc856a3"
+    url = "https://github.com/ericphanson/PDFSandwich.jl/releases/download/traineddata/tessdata_equ.tar.gz"
+
+[tessdata_fast_eng]
+git-tree-sha1 = "103517539a70bd2318dfbef1f4968a0b8d3d9e7c"
+lazy = true
+
+    [[tessdata_fast_eng.download]]
+    sha256 = "59380effe4f5b0c2860130555eb9bf6912ff2257d67f664833dbaebb6ebc8afb"
+    url = "https://github.com/ericphanson/PDFSandwich.jl/releases/download/traineddata/tessdata_fast_eng.tar.gz"
+
+[tessdata_fast_equ]
+git-tree-sha1 = "29a0eb031595d0f865e16efc4475976dd3b15456"
+lazy = true
+
+    [[tessdata_fast_equ.download]]
+    sha256 = "9e030055cb32526df89e0043537bab1112deeab587b45b9d39ab79d6f278835a"
+    url = "https://github.com/ericphanson/PDFSandwich.jl/releases/download/traineddata/tessdata_fast_equ.tar.gz"

@@ -3,3 +3,5 @@
 *.jl.mem
 /docs/build/
 Manifest.toml
+/data
+/test/test_rasterized_OCR.pdf
