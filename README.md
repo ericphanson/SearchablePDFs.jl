@@ -14,34 +14,34 @@ these](https://github.com/tesseract-ocr/tessdoc/blob/master/User-Projects-%E2%80
 already.
 
 I believe I have likely diverged from the `pdfsandwich` implementation since I
-haven't used ImageMagick's `convert` at all, which is one of the dependencies of
+haven't used ImageMagick's `convert` which is one of the dependencies of
 `pdfsandwich`. Since the job can be done very simply, e.g.
 
   1. convert each page of the PDF to an image
   2. possibly clean it up with `unpaper`
-  3. Use tesseract to create a single-page searchable PDF
-  4. Combine the PDFs
+  3. use tesseract to create a single-page searchable PDF
+  4. combine the PDFs,
 
 I decided to not look at the source of `pdfsandwich` so I can stick to an MIT
 license, which is the usual one in the Julia community.
 
 ## Status
 
-It more-or-less works on the test file, although it produces a lot of output and
-warnings.
+It more-or-less works on the test file, although it produces a lot of text
+output and warnings.
 
 Next steps:
 
 * Clean up the warnings and suppress or log the output
 * Allow choice of training data used for tesseract
 * Look at what settings should be used for `unpaper`
-* Allow limiting the number of tasks spawned
+* Allow customizing the number of tasks spawned
 * Robustify and test on more files
-* Add better tests
+* Add better tests?
 
 ## Usage
 
 ```julia
 using PDFSandwich
-file = ocr("test/julia_manual_3_pages_rasterized.pdf")
+file = ocr("test/test_rasterized.pdf")
 ```

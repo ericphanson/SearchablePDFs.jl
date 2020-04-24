@@ -29,6 +29,9 @@ end
 
 
 @testset "PDFSandwich.jl" begin
+
+    @test PDFSandwich.num_pages("test.pdf") == 3
+    
     # For now, just check it runs
     ocr("test_rasterized.pdf")
 end
