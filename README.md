@@ -3,7 +3,7 @@
 [![Build Status](https://github.com/ericphanson/PDFSandwich.jl/workflows/CI/badge.svg)](https://github.com/ericphanson/PDFSandwich.jl/actions)
 [![Coverage](https://codecov.io/gh/ericphanson/PDFSandwich.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/ericphanson/PDFSandwich.jl)
 
-I had been using  [pdfsandwich](`http://www.tobias-elze.de/pdfsandwich/`) to
+I had been using  [pdfsandwich](http://www.tobias-elze.de/pdfsandwich/) to
 create searchable PDFs from non-searchable PDFs. However, it's a pain to collect
 all the dependencies if e.g. you don't have root access. So I thought to package
 them up with Julia's BinaryBuilder to make installation simple. However, I
