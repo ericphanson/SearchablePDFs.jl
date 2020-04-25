@@ -1,12 +1,12 @@
 ```@meta
-CurrentModule = PDFSandwich
+CurrentModule = SearchablePDFs
 ```
 
-# PDFSandwich
+# SearchablePDFs
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [PDFSandwich]
+Modules = [SearchablePDFs]
 ```

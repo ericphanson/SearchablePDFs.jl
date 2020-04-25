@@ -1,4 +1,4 @@
-module PDFSandwich
+module SearchablePDFs
 using Pkg
 using Pkg.Artifacts
 

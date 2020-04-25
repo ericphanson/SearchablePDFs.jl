@@ -1,11 +1,11 @@
-using PDFSandwich
+using SearchablePDFs
 using Documenter
 
 makedocs(;
-    modules=[PDFSandwich],
+    modules=[SearchablePDFs],
     authors="Eric P. Hanson",
-    repo="https://github.com/ericphanson/PDFSandwich.jl/blob/{commit}{path}#L{line}",
-    sitename="PDFSandwich.jl",
+    repo="https://github.com/ericphanson/SearchablePDFs.jl/blob/{commit}{path}#L{line}",
+    sitename="SearchablePDFs.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
         assets=String[],

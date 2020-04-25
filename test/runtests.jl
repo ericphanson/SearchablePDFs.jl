@@ -1,4 +1,4 @@
-using PDFSandwich
+using SearchablePDFs
 using Test
 using ImageMagick_jll
 
@@ -16,21 +16,21 @@ end
 
 # Inverse of OCR
 function rasterize(pdf, output=string(splitext(pdf)[1], "_rasterized", ".pdf"))
-    pages = PDFSandwich.num_pages(pdf)
+    pages = SearchablePDFs.num_pages(pdf)
     pdfs = asyncmap(1:pages) do i
-        img = PDFSandwich.get_image(pdf, i)
+        img = SearchablePDFs.get_image(pdf, i)
         image_to_pdf(img)
     end
-    PDFSandwich.unite_pdfs(pdfs, output)
+    SearchablePDFs.unite_pdfs(pdfs, output)
     return output
 end
 
 # rasterize("test.pdf")
 
 
-@testset "PDFSandwich.jl" begin
+@testset "SearchablePDFs.jl" begin
 
-    @test PDFSandwich.num_pages("test.pdf") == 3
+    @test SearchablePDFs.num_pages("test.pdf") == 3
     
     # For now, just check it runs
     ocr("test_rasterized.pdf")

@@ -1,7 +1,7 @@
-# PDFSandwich
+# SearchablePDFs
 
-[![Build Status](https://github.com/ericphanson/PDFSandwich.jl/workflows/CI/badge.svg)](https://github.com/ericphanson/PDFSandwich.jl/actions)
-[![Coverage](https://codecov.io/gh/ericphanson/PDFSandwich.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/ericphanson/PDFSandwich.jl)
+[![Build Status](https://github.com/ericphanson/SearchablePDFs.jl/workflows/CI/badge.svg)](https://github.com/ericphanson/SearchablePDFs.jl/actions)
+[![Coverage](https://codecov.io/gh/ericphanson/SearchablePDFs.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/ericphanson/SearchablePDFs.jl)
 
 I had been using  [pdfsandwich](http://www.tobias-elze.de/pdfsandwich/) to
 create searchable PDFs from non-searchable PDFs. However, it's a pain to collect
@@ -42,6 +42,6 @@ Next steps:
 ## Usage
 
 ```julia
-using PDFSandwich
+using SearchablePDFs
 file = ocr("test/test_rasterized.pdf")
 ```
