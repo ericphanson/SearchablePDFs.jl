@@ -22,7 +22,7 @@ haven't used ImageMagick's `convert` which is one of the dependencies of
   3. use tesseract to create a single-page searchable PDF
   4. combine the PDFs,
 
-I decided to not look at the source of `pdfsandwich` so I can stick to an MIT
+I decided to not look at the source of `pdfsandwich` when creating my implementation so I can stick to an MIT
 license, which is the usual one in the Julia community.
 
 ## Status

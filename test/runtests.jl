@@ -8,7 +8,7 @@ using ImageMagick_jll
 function image_to_pdf(img)
     img_base, img_ext = splitext(img)
     output = img_base * ".pdf"
-    ImageMagick_jll.convert() do convert
+    ImageMagick_jll.imagemagick_convert() do convert
         run(`$convert $img $output`)
     end
     return output
@@ -25,13 +25,15 @@ function rasterize(pdf, output=string(splitext(pdf)[1], "_rasterized", ".pdf"))
     return output
 end
 
-# rasterize("test.pdf")
+TEST_PDF_PATH = joinpath(@__DIR__,"test.pdf")
+TEST_PDF_RASTERIZED_PATH = joinpath(@__DIR__,"test_rasterized.pdf")
+#rasterize(TEST_PDF_PATH)
 
 
 @testset "SearchablePDFs.jl" begin
 
-    @test SearchablePDFs.num_pages("test.pdf") == 3
+    @test SearchablePDFs.num_pages(TEST_PDF_PATH) == 3
     
     # For now, just check it runs
-    ocr("test_rasterized.pdf")
+    ocr(TEST_PDF_RASTERIZED_PATH)
 end
