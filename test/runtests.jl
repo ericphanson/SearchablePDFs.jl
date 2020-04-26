@@ -1,6 +1,6 @@
 using SearchablePDFs
 using Test
-using ImageMagick_jll
+using ImageMagick_jll: ImageMagick_jll
 
 # `test.pdf` is already searchable by construction
 # So we rasterize it first and then OCR back the text layer.

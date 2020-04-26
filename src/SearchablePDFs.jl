@@ -18,8 +18,7 @@ function get_data_path()
 end
 
 # Use Poppler to extract the image
-function get_image(pdf, page)
-    tmp = mktempdir()
+function get_image(pdf, page, tmp)
     Poppler_jll.pdftoppm() do pdftopnm
         run(`$pdftopnm -f $page -l $page $pdf $tmp/`)
     end
@@ -68,16 +67,19 @@ function num_pages(pdf)
 end
 
 # Chain it all together
-function ocr(pdf, output = string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper = true)    
+function ocr(pdf, output = string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper = true)
     pages = num_pages(pdf)
-    pdfs = asyncmap(1:pages; ntasks = (Sys.CPU_THREADS ÷ 2) - 1) do i
-        img = get_image(pdf, i)
-        if apply_unpaper
-            img = unpaper(img)
+    mktempdir() do tmp
+        pdfs = asyncmap(1:pages; ntasks = (Sys.CPU_THREADS ÷ 2) - 1) do i
+            t = mktempdir(tmp)
+            img = get_image(pdf, i, t)
+            if apply_unpaper
+                img = unpaper(img)
+            end
+            get_text(img)
         end
-        get_text(img)
+        unite_pdfs(pdfs, output)
     end
-    unite_pdfs(pdfs, output)
     return output
 end
 

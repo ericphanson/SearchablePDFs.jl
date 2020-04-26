@@ -32,8 +32,6 @@ output and warnings.
 
 Next steps:
 
-* Clean up temporary directories! Currently creates 1
-  per page and doesn't remove them.
 * Clean up the warnings and suppress or log the output
 * Allow choice of training data used for tesseract
 * Look at what settings should be used for `unpaper`
