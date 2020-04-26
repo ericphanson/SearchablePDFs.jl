@@ -1,39 +1,23 @@
-[tessdata_best_eng]
+[tessdata]
+git-tree-sha1 = "31bf52a4b0217fc12e5d56c780da8e804661a4b7"
+lazy = true
+
+    [[tessdata.download]]
+    sha256 = "dbc59d8e1de68e90c71cb1f9f0ee05119610df5ad43e6f26f20b907a731774a8"
+    url = "https://github.com/ericphanson/SearchablePDFs.jl/releases/download/traineddata/tessdata.tar.gz"
+
+[tessdata_best]
 git-tree-sha1 = "752f60d987df86cc91b505936601cdb1988406f8"
 lazy = true
 
-    [[tessdata_best_eng.download]]
-    sha256 = "b581ba301cab91202cb48bb835e0f03fc0ec686ff27e5000786b3300e6c626aa"
-    url = "https://github.com/ericphanson/SearchablePDFs.jl/releases/download/traineddata/tessdata_best_eng.tar.gz"
+    [[tessdata_best.download]]
+    sha256 = "3018ba9abbe6ce3f964a32d422e78f66b7395b5e400ea90776b278eee3884fe8"
+    url = "https://github.com/ericphanson/SearchablePDFs.jl/releases/download/traineddata/tessdata_best.tar.gz"
 
-[tessdata_eng]
-git-tree-sha1 = "a4d4f5c70bb594ea4e3028fc9b0fcd83c692bbaa"
+[tessdata_fast]
+git-tree-sha1 = "8d9094c67ba77459bd6326b07f47c4aba24fa004"
 lazy = true
 
-    [[tessdata_eng.download]]
-    sha256 = "218059fc6e022335956b502899ec1046a1b3e6760de2d37ae97ef99597ce0458"
-    url = "https://github.com/ericphanson/SearchablePDFs.jl/releases/download/traineddata/tessdata_eng.tar.gz"
-
-[tessdata_equ]
-git-tree-sha1 = "29a0eb031595d0f865e16efc4475976dd3b15456"
-lazy = true
-
-    [[tessdata_equ.download]]
-    sha256 = "748e6b0f043ab5c3c67b410cc9fef696b0e4d33a201589df0487d20ddcc856a3"
-    url = "https://github.com/ericphanson/SearchablePDFs.jl/releases/download/traineddata/tessdata_equ.tar.gz"
-
-[tessdata_fast_eng]
-git-tree-sha1 = "103517539a70bd2318dfbef1f4968a0b8d3d9e7c"
-lazy = true
-
-    [[tessdata_fast_eng.download]]
-    sha256 = "59380effe4f5b0c2860130555eb9bf6912ff2257d67f664833dbaebb6ebc8afb"
-    url = "https://github.com/ericphanson/SearchablePDFs.jl/releases/download/traineddata/tessdata_fast_eng.tar.gz"
-
-[tessdata_fast_equ]
-git-tree-sha1 = "29a0eb031595d0f865e16efc4475976dd3b15456"
-lazy = true
-
-    [[tessdata_fast_equ.download]]
-    sha256 = "9e030055cb32526df89e0043537bab1112deeab587b45b9d39ab79d6f278835a"
-    url = "https://github.com/ericphanson/SearchablePDFs.jl/releases/download/traineddata/tessdata_fast_equ.tar.gz"
+    [[tessdata_fast.download]]
+    sha256 = "b97ddd54b0f190bf56d952ac9e3c9cda643537fd98c3122c457097074d9363ee"
+    url = "https://github.com/ericphanson/SearchablePDFs.jl/releases/download/traineddata/tessdata_fast.tar.gz"

@@ -14,7 +14,7 @@ export ocr
 
 # For now we will hardcode this choice of training data
 function get_data_path()
-    joinpath(artifact"tessdata_eng", "eng.traineddata")
+    artifact"tessdata_fast"
 end
 
 # Use Poppler to extract the image
@@ -38,12 +38,12 @@ end
 
 # Use tesseract to make a single-page searchable pdf from an image
 function get_text(img)
-    data_path = dirname(get_data_path()) * "/"
+    data_path = get_data_path() * "/"
     img_base, img_ext = splitext(img)
     output = img_base
     withenv("OMP_THREAD_LIMIT" => 1) do
         Tesseract_jll.tesseract() do tesseract
-            run(`$tesseract  --tessdata-dir $data_path $img $output -c tessedit_create_pdf=1`)
+            run(`$tesseract -l eng+equ --tessdata-dir $data_path $img $output -c tessedit_create_pdf=1`)
         end
     end
     return output * ".pdf"
@@ -67,7 +67,7 @@ function num_pages(pdf)
 end
 
 # Chain it all together
-function ocr(pdf, output = string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper = true)
+function ocr(pdf, output = string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper = false)
     pages = num_pages(pdf)
     mktempdir() do tmp
         pdfs = asyncmap(1:pages; ntasks = (Sys.CPU_THREADS ÷ 2) - 1) do i

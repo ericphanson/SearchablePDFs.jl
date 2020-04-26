@@ -32,31 +32,31 @@ end
 
 for dir in readdir(data_dir)
     weightsfiles = filter(x->endswith(x,".traineddata"), readdir(joinpath(data_dir, dir)))
-    for weightsfile in weightsfiles
-        name = string(dir, "_", splitext(weightsfile)[1])
-        @info("Generating artifact for $(name)")
-        # Create a local artifact
-        hash = create_artifact() do artifact_dir
-            # Copy in weights
+    
+    @info("Generating artifact for $(dir)")
+    # Create a local artifact
+    hash = create_artifact() do artifact_dir
+        # Copy in weights
+        for weightsfile in weightsfiles
             cp(joinpath(data_dir, dir, weightsfile), joinpath(artifact_dir, weightsfile))
-            # Copy in the license
-            cp(joinpath(data_dir, dir, "LICENSE"), joinpath(artifact_dir, "LICENSE"))
-            # Copy in the `pdf.ttf` file
-            cp(joinpath(data_dir, dir, "pdf.ttf"), joinpath(artifact_dir, "pdf.ttf"))
-
         end
+        # Copy in the license
+        cp(joinpath(data_dir, dir, "LICENSE"), joinpath(artifact_dir, "LICENSE"))
+        # Copy in the `pdf.ttf` file
+        cp(joinpath(data_dir, dir, "pdf.ttf"), joinpath(artifact_dir, "pdf.ttf"))
 
-        # Spit tarballs to be hosted out to local temporary directory:
-        if deploy
-            tarball_hash = archive_artifact(hash, joinpath(tmpdir, "$(name).tar.gz"))
+    end
 
-            # Calculate tarball url
-            tarball_url = "https://github.com/$(deploy_repo)/releases/download/$(tag)/$(name).tar.gz"
+    # Spit tarballs to be hosted out to local temporary directory:
+    if deploy
+        tarball_hash = archive_artifact(hash, joinpath(tmpdir, "$(dir).tar.gz"))
 
-            # Bind this to an Artifacts.toml file
-            @info("Binding $(name) in Artifacts.toml...")
-            bind_artifact!(joinpath(@__DIR__, "..", "Artifacts.toml"), name, hash; download_info=[(tarball_url, tarball_hash)], lazy=true, force=true)
-        end
+        # Calculate tarball url
+        tarball_url = "https://github.com/$(deploy_repo)/releases/download/$(tag)/$(dir).tar.gz"
+
+        # Bind this to an Artifacts.toml file
+        @info("Binding $(dir) in Artifacts.toml...")
+        bind_artifact!(joinpath(@__DIR__, "..", "Artifacts.toml"), dir, hash; download_info=[(tarball_url, tarball_hash)], lazy=true, force=true)
     end
 end
 
