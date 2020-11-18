@@ -5,7 +5,6 @@ using Pkg.Artifacts
 using Poppler_jll
 using unpaper_jll
 using Tesseract_jll
-using grep_jll
 
 const pdfconfig = normpath(joinpath(@__DIR__, "..", "deps", "tessconfigs", "pdf"))
 
@@ -58,12 +57,11 @@ end
 
 # There's gotta be a better way...
 function num_pages(pdf)
-    result = grep_jll.grep() do grep
-        Poppler_jll.pdfinfo() do pdfinfo
-            read(pipeline(`$pdfinfo $pdf`, `$grep Pages`), String)
-        end
+    result = Poppler_jll.pdfinfo() do pdfinfo
+        read(`$pdfinfo $pdf`, String)
     end
-    return parse(Int, split(result)[2])
+    m = match(r"Pages\:\s*([1-9]*)", result)
+    return parse(Int, m.captures[1])
 end
 
 # Chain it all together
