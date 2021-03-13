@@ -6,12 +6,16 @@ version = "0.1.0"
 [deps]
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Poppler_jll = "9c32591e-4766-534b-9725-b71a8799265b"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
+Scratch = "6c6a2e73-6563-6170-7368-637461726353"
 Tesseract_jll = "efd95c89-babc-5260-8753-618084eaf9d7"
 grep_jll = "47013893-54eb-5c9c-83b4-9a24496ece36"
 unpaper_jll = "d52248c9-e08a-51c2-9066-05d0bf3e6245"
 
 [compat]
-julia = "1.4"
+ProgressMeter = "1.5"
+Scratch = "1"
+julia = "1.5"
 
 [extras]
 ImageMagick_jll = "c73af94c-d91f-53ed-93a7-00f77d67a9d7"

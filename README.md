@@ -27,15 +27,12 @@ license, which is the usual one in the Julia community.
 
 ## Status
 
-It more-or-less works on the test file, although it produces a lot of text
-output and warnings.
+It more-or-less works on the test file on MacOS and Linux.
 
 Next steps:
 
-* Clean up the warnings and suppress or log the output
 * Allow choice of training data used for tesseract
 * Look at what settings should be used for `unpaper`
-* Allow customizing the number of tasks spawned
 * Robustify and test on more files
 * Add better tests?
 
