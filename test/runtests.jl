@@ -10,12 +10,13 @@ TEST_PDF_RASTERIZED_PATH = joinpath(@__DIR__, "test_rasterized.pdf")
     @test SearchablePDFs.num_pages(TEST_PDF_PATH) == 3
 
     for verbose in (false, true), apply_unpaper in (false, true), f in (searchable, ocr)
-        kwargs = f === searchable ? (; logfile = joinpath(@__DIR__, "test_logs.csv")) : NamedTuple()
-            
+        kwargs = f === searchable ? (; logfile=joinpath(@__DIR__, "test_logs.csv")) :
+                 NamedTuple()
+
         result = f(TEST_PDF_RASTERIZED_PATH, joinpath(@__DIR__, "out.pdf"); verbose,
-                     apply_unpaper, kwargs...)
+                   apply_unpaper, kwargs...)
         atexit(() -> rm(result.output_path; force=true)) # make sure we delete the file eventually, even if the tests throw
-       
+
         @test isfile(result.output_path)
 
         text = pdftotext() do exe

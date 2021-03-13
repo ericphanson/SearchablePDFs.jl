@@ -156,7 +156,8 @@ end
 #####
 function require_extension(path, ext)
     _ext = splitext(path)[2]
-    _ext == ext || argument_error("Expected $path to have file extension `$ext`; got `$(_ext)`")
+    _ext == ext ||
+        argument_error("Expected $path to have file extension `$ext`; got `$(_ext)`")
     return nothing
 end
 
@@ -185,7 +186,6 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
              ntasks=Sys.CPU_THREADS - 1, tesseract_nthreads=1, pages=nothing,
              cleanup_after=true, cleanup_at_exit=true, tmp=get_scratch_dir(pdf),
              verbose=true, force=false)
-
     isfile(pdf) || argument_error("Input file not found at `$pdf`")
     force || require_no_file(output_path)
     require_extension(pdf, ".pdf")
@@ -261,9 +261,12 @@ end
 """
 Create a searchable version of a PDF.
 """
-@main function searchable(pdf::String, output_path::String=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper::Bool=false,
-    ntasks::Int=Sys.CPU_THREADS - 1, tesseract_nthreads::Int=1, keep_intermediates::Bool=false, tmp::String=get_scratch_dir(pdf),
-    quiet::Bool=false, logfile::Union{Nothing, String}=nothing, force::Bool=false)
+@main function searchable(pdf::String,
+                          output_path::String=string(splitext(pdf)[1], "_OCR", ".pdf");
+                          apply_unpaper::Bool=false, ntasks::Int=Sys.CPU_THREADS - 1,
+                          tesseract_nthreads::Int=1, keep_intermediates::Bool=false,
+                          tmp::String=get_scratch_dir(pdf), quiet::Bool=false,
+                          logfile::Union{Nothing,String}=nothing, force::Bool=false)
     # some of these are redundant with checks inside `ocr`; that's because we want to do them before the "Starting to ocr" message.
     isfile(pdf) || argument_error("Input file not found at `$pdf`")
     force || require_no_file(output_path)
@@ -274,8 +277,11 @@ Create a searchable version of a PDF.
         require_extension(logfile, ".csv")
     end
     verbose = !quiet
-    verbose && println("Starting to ocr `$pdf`; result will be located at `$(output_path)`.")
-    result = ocr(pdf, output_path; apply_unpaper, ntasks, tesseract_nthreads, cleanup_after=!keep_intermediates, cleanup_at_exit=!keep_intermediates, tmp, verbose)
+    verbose &&
+        println("Starting to ocr `$pdf`; result will be located at `$(output_path)`.")
+    result = ocr(pdf, output_path; apply_unpaper, ntasks, tesseract_nthreads,
+                 cleanup_after=!keep_intermediates, cleanup_at_exit=!keep_intermediates,
+                 tmp, verbose)
     verbose && println("\nOutput is located at `$(output_path)`.")
     if keep_intermediates && verbose
         println("Intermediate files located at `$tmp`.")
