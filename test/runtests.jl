@@ -8,8 +8,8 @@ TEST_PDF_RASTERIZED_PATH = joinpath(@__DIR__, "test_rasterized.pdf")
 @testset "SearchablePDFs.jl" begin
     @test SearchablePDFs.num_pages(TEST_PDF_PATH) == 3
 
-    for show_progress in (false, true), apply_unpaper in (false, true)
-        result = ocr(TEST_PDF_RASTERIZED_PATH, joinpath(@__DIR__, "out.pdf"); show_progress,
+    for verbose in (false, true), apply_unpaper in (false, true)
+        result = ocr(TEST_PDF_RASTERIZED_PATH, joinpath(@__DIR__, "out.pdf"); verbose,
                      apply_unpaper)
         atexit(() -> rm(result.output_path; force=true)) # make sure we delete the file eventually, even if the tests throw
 

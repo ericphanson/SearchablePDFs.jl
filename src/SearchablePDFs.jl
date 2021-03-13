@@ -9,7 +9,6 @@ using Scratch
 using Poppler_jll
 using unpaper_jll
 using Tesseract_jll
-using grep_jll
 
 export ocr
 
@@ -47,12 +46,11 @@ end
 
 # There's gotta be a better way...
 function num_pages(pdf)
-    result = grep_jll.grep() do grep
-        Poppler_jll.pdfinfo() do pdfinfo
-            return read(pipeline(`$pdfinfo $pdf`, `$grep Pages`), String)
-        end
+    result = Poppler_jll.pdfinfo() do pdfinfo
+        return read(`$pdfinfo $pdf`, String)
     end
-    return parse(Int, split(result)[2])
+    m = match(r"Pages\:\s*([1-9]*)", result)
+    return parse(Int, m.captures[1])
 end
 
 #####
