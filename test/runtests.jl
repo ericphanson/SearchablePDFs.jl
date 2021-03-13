@@ -1,39 +1,27 @@
 using SearchablePDFs
 using Test
-using ImageMagick_jll: ImageMagick_jll
+using Poppler_jll
 
-# `test.pdf` is already searchable by construction
-# So we rasterize it first and then OCR back the text layer.
-
-function image_to_pdf(img)
-    img_base, img_ext = splitext(img)
-    output = img_base * ".pdf"
-    ImageMagick_jll.imagemagick_convert() do convert
-        run(`$convert $img $output`)
-    end
-    return output
-end
-
-# Inverse of OCR
-function rasterize(pdf, output=string(splitext(pdf)[1], "_rasterized", ".pdf"))
-    pages = SearchablePDFs.num_pages(pdf)
-    pdfs = asyncmap(1:pages) do i
-        img = SearchablePDFs.get_image(pdf, i)
-        image_to_pdf(img)
-    end
-    SearchablePDFs.unite_pdfs(pdfs, output)
-    return output
-end
-
-TEST_PDF_PATH = joinpath(@__DIR__,"test.pdf")
-TEST_PDF_RASTERIZED_PATH = joinpath(@__DIR__,"test_rasterized.pdf")
-#rasterize(TEST_PDF_PATH)
-
+TEST_PDF_PATH = joinpath(@__DIR__, "test.pdf")
+TEST_PDF_RASTERIZED_PATH = joinpath(@__DIR__, "test_rasterized.pdf")
 
 @testset "SearchablePDFs.jl" begin
-
     @test SearchablePDFs.num_pages(TEST_PDF_PATH) == 3
-    
-    # For now, just check it runs
-    ocr(TEST_PDF_RASTERIZED_PATH)
+
+    for verbose in (false, true), apply_unpaper in (false, true)
+        result = ocr(TEST_PDF_RASTERIZED_PATH, joinpath(@__DIR__, "out.pdf"); verbose,
+                     apply_unpaper)
+        atexit(() -> rm(result.output_path; force=true)) # make sure we delete the file eventually, even if the tests throw
+
+        @test isfile(result.output_path)
+
+        text = pdftotext() do exe
+            return read(`$exe $(result.output_path) -`, String)
+        end
+
+        @test occursin("Chapter 9", text)
+        @test occursin("evaluate expressions written in a source file", text)
+
+        rm(result.output_path)
+    end
 end
