@@ -42,3 +42,9 @@ Next steps:
 using SearchablePDFs
 file = ocr("test/test_rasterized.pdf")
 ```
+
+Call
+```julia
+SearchablePDFs.comonicon_install()
+```
+to install a CLI script.
