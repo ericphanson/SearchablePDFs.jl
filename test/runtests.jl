@@ -1,5 +1,5 @@
 using SearchablePDFs
-using SearchablePDFs: searchable
+using SearchablePDFs: searchable, require_extension, require_no_file
 using Test
 using Poppler_jll
 using Aqua
@@ -32,6 +32,14 @@ TEST_PDF_RASTERIZED_PATH = joinpath(@__DIR__, "test_rasterized.pdf")
             rm(joinpath(@__DIR__, "test_logs.csv"))
         end
         rm(result.output_path)
+    end
+
+    @testset "Errors" begin
+        @test require_no_file("DOES_NOT_EXIST.pdf"; exception=true) === nothing
+        @test_throws ArgumentError require_no_file("runtests.jl"; exception=true)
+
+        @test require_extension("DOES_NOT_EXIST.pdf", ".pdf"; exception=true) === nothing
+        @test_throws ArgumentError require_extension("runtests.jl", ".pdf"; exception=true)
     end
 end
 

@@ -19,14 +19,27 @@ export ocr
 ##### Utilities
 #####
 
-function argument_error(msg)
-    if isinteractive()
+function argument_error(msg; exception=isinteractive())
+    if exception
         throw(ArgumentError(msg))
     else
         printstyled("ERROR:"; bold=true, color=:red)
         printstyled(" ", msg, "\n"; color=:red)
         exit(1)
     end
+end
+
+function require_extension(path, ext; exception=isinteractive())
+    _ext = splitext(path)[2]
+    _ext == ext ||
+        argument_error("Expected $path to have file extension `$ext`; got `$(_ext)`";
+                       exception)
+    return nothing
+end
+
+function require_no_file(path; exception=isinteractive())
+    isfile(path) && argument_error("File already exists at `$(path)`!"; exception)
+    return nothing
 end
 
 # For now we will hardcode this choice of training data
@@ -154,14 +167,6 @@ end
 #####
 ##### Apply steps 1 -- 3
 #####
-function require_extension(path, ext)
-    _ext = splitext(path)[2]
-    _ext == ext ||
-        argument_error("Expected $path to have file extension `$ext`; got `$(_ext)`")
-    return nothing
-end
-
-require_no_file(path) = isfile(path) && argument_error("File already exists at `$(path)`!")
 
 """
     ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper=false,
@@ -186,17 +191,18 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
              ntasks=Sys.CPU_THREADS - 1, tesseract_nthreads=1, pages=nothing,
              cleanup_after=true, cleanup_at_exit=true, tmp=get_scratch_dir(pdf),
              verbose=true, force=false)
-    isfile(pdf) || argument_error("Input file not found at `$pdf`")
-    force || require_no_file(output_path)
-    require_extension(pdf, ".pdf")
-    require_extension(output_path, ".pdf")
+    isfile(pdf) || argument_error("Input file not found at `$pdf`"; exception=true)
+    force || require_no_file(output_path; exception=true)
+    require_extension(pdf, ".pdf"; exception=true)
+    require_extension(output_path, ".pdf"; exception=true)
 
     total_pages = num_pages(pdf)
 
     if pages === nothing
         pages = total_pages
     elseif pages > total_pages
-        argument_error("`pages` must be less than the total number of pages ($(total_pages))")
+        argument_error("`pages` must be less than the total number of pages ($(total_pages))";
+                       exception=true)
     end
 
     mkpath(tmp)
@@ -268,7 +274,8 @@ Create a searchable version of a PDF.
                           keep_intermediates::Bool=false,
                           tmp::String=get_scratch_dir(input_pdf), quiet::Bool=false,
                           logfile::Union{Nothing,String}=nothing, force::Bool=false)
-    # some of these are redundant with checks inside `ocr`; that's because we want to do them before the "Starting to ocr" message.
+    # some of these are redundant with checks inside `ocr`; that's because we want to do them before the "Starting to ocr" message,
+    # and we want them to exit if they fail in a non-interactive context, instead of printing a stacktracee.
     isfile(input_pdf) || argument_error("Input file not found at `$(input_pdf)`")
     force || require_no_file(output_path)
     require_extension(input_pdf, ".pdf")
