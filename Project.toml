@@ -4,6 +4,8 @@ authors = ["Eric P. Hanson"]
 version = "0.1.0"
 
 [deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+Comonicon = "863f3e99-da2a-4334-8734-de3dacbe5542"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Poppler_jll = "9c32591e-4766-534b-9725-b71a8799265b"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"

@@ -1,0 +1,20 @@
+name = "searchable"
+
+[install]
+completion = true
+quiet = false
+optimize = 2
+
+# [sysimg]
+# incremental=true
+# filter_stdlibs=false
+
+# [sysimg.precompile]
+# execution_file = ["test/runtests.jl"]
+
+# [application]
+# incremental=false
+# filter_stdlibs=true
+
+# [application.precompile]
+# execution_file = ["test/runtests.jl"]

@@ -1,10 +1,13 @@
 module SearchablePDFs
+
 using Pkg
 using Pkg.Artifacts
 using Random
 
 using ProgressMeter
 using Scratch
+using CSV
+using Comonicon
 
 using Poppler_jll
 using unpaper_jll
@@ -15,6 +18,16 @@ export ocr
 #####
 ##### Utilities
 #####
+
+function argument_error(msg)
+    if isinteractive()
+        throw(ArgumentError(msg))
+    else
+        printstyled("ERROR:"; bold=true, color=:red)
+        printstyled(" ", msg, "\n"; color=:red)
+        exit(1)
+    end
+end
 
 # For now we will hardcode this choice of training data
 function get_data_path()
@@ -122,6 +135,9 @@ function recursive_unite_pdfs!(unite_prog, all_logs, tmp, pdfs, output_path; max
         next!(unite_prog; step=length(pdfs))
         return nothing
     end
+    # we have many pdfs; make sure `tmp` is an actual directory so we can use it
+    # to save intermediate files.
+    mkpath(tmp)
     partially_united_pdfs = String[]
     for current_pdfs in Iterators.partition(pdfs, max_files)
         new_tmp = mktempdir(tmp)
@@ -138,13 +154,20 @@ end
 #####
 ##### Apply steps 1 -- 3
 #####
+function require_extension(path, ext)
+    _ext = splitext(path)[2]
+    _ext == ext || argument_error("Expected $path to have file extension `$ext`; got `$(_ext)`")
+    return nothing
+end
+
+require_no_file(path) = isfile(path) && argument_error("File already exists at `$(path)`!")
 
 """
     ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper=false,
              ntasks=Sys.CPU_THREADS - 1, tesseract_nthreads=1, pages=num_pages(pdf),
              cleanup_after=true, cleanup_at_exit=true, tmp=get_scratch_dir(pdf),
              verbose=true)
-
+             
 Reads in a PDF located at `pdf`, uses Tesseract to OCR each page and combines the results into a pdf located `output_path`.
 
 Keyword arguments:
@@ -161,17 +184,19 @@ Set `ENV["JULIA_DEBUG"] = SearchablePDFs` to see (many) debug messages.
 function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper=false,
              ntasks=Sys.CPU_THREADS - 1, tesseract_nthreads=1, pages=nothing,
              cleanup_after=true, cleanup_at_exit=true, tmp=get_scratch_dir(pdf),
-             verbose=true)
-    isfile(pdf) || throw(ArgumentError("File not found at $pdf"))
-    ext = splitext(pdf)[2]
-    ext == ".pdf" || throw(ArgumentError("Expected file extension `.pdf`; got $ext"))
+             verbose=true, force=false)
+
+    isfile(pdf) || argument_error("Input file not found at `$pdf`")
+    force || require_no_file(output_path)
+    require_extension(pdf, ".pdf")
+    require_extension(output_path, ".pdf")
 
     total_pages = num_pages(pdf)
 
     if pages === nothing
         pages = total_pages
     elseif pages > total_pages
-        throw(ArgumentError("`pages` must be less than the total number of pages ($(total_pages))"))
+        argument_error("`pages` must be less than the total number of pages ($(total_pages))")
     end
 
     mkpath(tmp)
@@ -213,7 +238,6 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
     end
     @debug "Finished processing pages. Uniting..."
     unite_dir = joinpath(tmp, "unite")
-    mkpath(unite_dir)
     max_files = 100
     unite_prog = Progress(pages + cld(pages, max_files) + 1;
                           desc="(3/3) Collecting pages: ", enabled=verbose)
@@ -228,6 +252,41 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
         isfile(output_path) || @error "File was not generated, check the logs!"
     end
     return (; output_path, logs=all_logs)
+end
+
+#####
+##### CLI interface
+#####
+
+"""
+Create a searchable version of a PDF.
+"""
+@main function searchable(pdf::String, output_path::String=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper::Bool=false,
+    ntasks::Int=Sys.CPU_THREADS - 1, tesseract_nthreads::Int=1, keep_intermediates::Bool=false, tmp::String=get_scratch_dir(pdf),
+    quiet::Bool=false, logfile::Union{Nothing, String}=nothing, force::Bool=false)
+    # some of these are redundant with checks inside `ocr`; that's because we want to do them before the "Starting to ocr" message.
+    isfile(pdf) || argument_error("Input file not found at `$pdf`")
+    force || require_no_file(output_path)
+    require_extension(pdf, ".pdf")
+    require_extension(output_path, ".pdf")
+    if logfile !== nothing
+        force || require_no_file(logfile)
+        require_extension(logfile, ".csv")
+    end
+    verbose = !quiet
+    verbose && println("Starting to ocr `$pdf`; result will be located at `$(output_path)`.")
+    result = ocr(pdf, output_path; apply_unpaper, ntasks, tesseract_nthreads, cleanup_after=!keep_intermediates, cleanup_at_exit=!keep_intermediates, tmp, verbose)
+    verbose && println("\nOutput is located at `$(output_path)`.")
+    if keep_intermediates && verbose
+        println("Intermediate files located at `$tmp`.")
+    end
+    if logfile !== nothing
+        verbose && println("Writing logs...")
+        CSV.write(logfile, result.logs)
+        verbose && println("Logs written to `$(logfile)`.")
+    end
+
+    return result
 end
 
 end # module
