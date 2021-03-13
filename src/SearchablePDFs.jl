@@ -22,6 +22,10 @@ function get_data_path()
     return artifact"tessdata_fast"
 end
 
+# a place to store intermediate files; we could use temporary directories,
+# but I've occasionally run into permissions issues there
+# so I'd prefer to use a more local location. This also means that we are
+# more in charge of the cleanup, which can be good for debugging.
 function get_scratch_dir(pdf)
     return joinpath(@get_scratch!("pdf_tmps"),
                     splitext(basename(pdf))[1] * "_" * string(randstring(10)))
