@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        julia-version: ^1.6.0-0
+        julia-version: [^1.6.0-0]
         julia-arch: [x86]
         os: [ubuntu-latest]
     steps:
