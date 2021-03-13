@@ -14,14 +14,14 @@ export ocr
 
 # For now we will hardcode this choice of training data
 function get_data_path()
-    artifact"tessdata_fast"
+    return artifact"tessdata_fast"
 end
 
 # Use Poppler to extract the image
 function get_image(pdf, page, tmp)
     local logs
     Poppler_jll.pdftoppm() do pdftoppm
-        logs = run_and_collect_logs(`$pdftoppm -f $page -l $page $pdf $tmp/`)
+        return logs = run_and_collect_logs(`$pdftoppm -f $page -l $page $pdf $tmp/`)
     end
     @debug "`pdftopnm`" logs
     img = only(readdir(tmp; join=true))
@@ -34,7 +34,7 @@ function unpaper(img)
     img_base, img_ext = splitext(img)
     img_unpaper = img_base * "_unpaper" * img_ext
     unpaper_jll.unpaper() do unpaper
-        logs = run_and_collect_logs(`$unpaper $img $img_unpaper`)
+        return logs = run_and_collect_logs(`$unpaper $img $img_unpaper`)
     end
     return (; img_unpaper, logs)
 end
@@ -43,18 +43,14 @@ end
 function run_and_collect_logs(cmd::Cmd)
     out = Pipe()
     err = Pipe()
-    process = run(pipeline(cmd, stdout=out, stderr=err), wait=false)
+    process = run(pipeline(cmd; stdout=out, stderr=err); wait=false)
     close(out.in)
     close(err.in)
 
     stdout = @async String(read(out))
     stderr = @async String(read(err))
     wait(process)
-    return (
-        stdout = fetch(stdout),
-        stderr = fetch(stderr),
-        code = process.exitcode
-    )
+    return (stdout=fetch(stdout), stderr=fetch(stderr), code=process.exitcode)
 end
 
 # Use tesseract to make a single-page searchable pdf from an image
@@ -71,14 +67,14 @@ function get_text(img; tesseract_nthreads)
             @debug logs
         end
     end
-    return (; pdf = output * ".pdf", logs=(; binary="tesseract", logs...))
+    return (; pdf=output * ".pdf", logs=(; binary="tesseract", logs...))
 end
 
 # Collect all the PDFs into one with `pdfunite`
 function unite_pdfs(pdfs, output)
     local logs
     Poppler_jll.pdfunite() do pdfunite
-        logs = run_and_collect_logs(`$pdfunite $pdfs $output`)
+        return logs = run_and_collect_logs(`$pdfunite $pdfs $output`)
     end
     return (; binary="pdfunite", logs...)
 end
@@ -87,7 +83,7 @@ end
 function num_pages(pdf)
     result = grep_jll.grep() do grep
         Poppler_jll.pdfinfo() do pdfinfo
-            read(pipeline(`$pdfinfo $pdf`, `$grep Pages`), String)
+            return read(pipeline(`$pdfinfo $pdf`, `$grep Pages`), String)
         end
     end
     return parse(Int, split(result)[2])
@@ -108,19 +104,24 @@ Keyword arguments:
 * `tmp`
 
 """
-function ocr(pdf, output_path = string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper = false, ntasks = Sys.CPU_THREADS-1, capture_logs = true, tesseract_nthreads=1, pages = num_pages(pdf), cleanup_after=true, tmp = joinpath(@get_scratch!("pdf_tmps"), splitext(basename(pdf))[1] * "_" * string(rand(1:1000))))
+function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper=false,
+             ntasks=Sys.CPU_THREADS - 1, capture_logs=true, tesseract_nthreads=1,
+             pages=num_pages(pdf), cleanup_after=true,
+             tmp=joinpath(@get_scratch!("pdf_tmps"),
+                          splitext(basename(pdf))[1] * "_" * string(rand(1:1000))))
     isfile(pdf) || throw(ArgumentError("File not found at $pdf"))
     ext = splitexp(pdf)[2]
     ext == "pdf" || throw(ArgumentError("Expected file extension `pdf`; got $ext"))
-    
+
     # 1k page limit due to `pdftoppm` numbering by 001, 002, etc.
     # should be workaround-able...
     pages < 1000 || throw(ArgumentError("PDF must have less than 1000 pages"))
 
     @debug "Found file" pdf pages tmp
 
-    all_logs = @NamedTuple{page::Union{Int, UnitRange{Int}, Missing}, binary::String, stdout::String, stderr::String, code::Int}[]
-    sizehint!(all_logs, pages+2)
+    all_logs = @NamedTuple{page::Union{Int,UnitRange{Int},Missing},binary::String,
+                           stdout::String,stderr::String,code::Int}[]
+    sizehint!(all_logs, pages + 2)
 
     mkpath(tmp)
 
@@ -129,11 +130,11 @@ function ocr(pdf, output_path = string(splitext(pdf)[1], "_OCR", ".pdf"); apply_
     asyncmap(Iterators.partition(1:pages, 20); ntasks) do current_pages
         local pdftoppm_logs
         Poppler_jll.pdftoppm() do pdftoppm
-            pdftoppm_logs = run_and_collect_logs(`$pdftoppm -f $(first(current_pages)) -l $(last(current_pages)) $pdf -tiff -forcenum $(tmp)/page`)
+            return pdftoppm_logs = run_and_collect_logs(`$pdftoppm -f $(first(current_pages)) -l $(last(current_pages)) $pdf -tiff -forcenum $(tmp)/page`)
         end
         push!(all_logs, (; page=current_pages, binary="pdftoppm", pdftoppm_logs...))
         @debug "" pdftoppm_logs
-        next!(imag_prog; step=length(current_pages))
+        return next!(imag_prog; step=length(current_pages))
     end
 
     @debug "Finished generating images. Starting tesseracting..."
@@ -156,7 +157,8 @@ function ocr(pdf, output_path = string(splitext(pdf)[1], "_OCR", ".pdf"); apply_
     unite_dir = joinpath(tmp, "unite")
     mkpath(unite_dir)
     max_files = 100
-    unite_prog = Progress(pages + cld(pages, max_files) + 1; desc="(3/3) Collecting pages: ")
+    unite_prog = Progress(pages + cld(pages, max_files) + 1;
+                          desc="(3/3) Collecting pages: ")
     recursive_unite_pdfs!(unite_prog, all_logs, unite_dir, pdfs, output_path; max_files)
     @debug "Done uniting pdfs"
 
@@ -165,21 +167,22 @@ function ocr(pdf, output_path = string(splitext(pdf)[1], "_OCR", ".pdf"); apply_
         rm(tmp; recursive=true, force=true)
     end
     @debug "Done"
-    return (; output_path, logs = all_logs)
+    return (; output_path, logs=all_logs)
 end
 
 function recursive_unite_pdfs!(unite_prog, all_logs, tmp, pdfs, output_path; max_files=100)
     if length(pdfs) <= max_files
         unite_logs = unite_pdfs(pdfs, output_path)
         push!(all_logs, (; page=missing, unite_logs...))
-        next!(unite_prog; step = length(pdfs))
+        next!(unite_prog; step=length(pdfs))
         return nothing
     end
     outs = String[]
     for collection in Iterators.partition(pdfs, max_files)
         new_tmp = mktempdir(tmp)
         out_path = joinpath(new_tmp, "out.pdf")
-        recursive_unite_pdfs!(unite_prog, all_logs, new_tmp, collection, out_path; max_files)
+        recursive_unite_pdfs!(unite_prog, all_logs, new_tmp, collection, out_path;
+                              max_files)
         push!(outs, out_path)
     end
     recursive_unite_pdfs!(unite_prog, all_logs, tmp, outs, output_path; max_files)

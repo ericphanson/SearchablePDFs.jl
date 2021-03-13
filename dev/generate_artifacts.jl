@@ -31,8 +31,9 @@ if deploy
 end
 
 for dir in readdir(data_dir)
-    weightsfiles = filter(x->endswith(x,".traineddata"), readdir(joinpath(data_dir, dir)))
-    
+    weightsfiles = filter(x -> endswith(x, ".traineddata"),
+                          readdir(joinpath(data_dir, dir)))
+
     @info("Generating artifact for $(dir)")
     # Create a local artifact
     hash = create_artifact() do artifact_dir
@@ -43,8 +44,7 @@ for dir in readdir(data_dir)
         # Copy in the license
         cp(joinpath(data_dir, dir, "LICENSE"), joinpath(artifact_dir, "LICENSE"))
         # Copy in the `pdf.ttf` file
-        cp(joinpath(data_dir, dir, "pdf.ttf"), joinpath(artifact_dir, "pdf.ttf"))
-
+        return cp(joinpath(data_dir, dir, "pdf.ttf"), joinpath(artifact_dir, "pdf.ttf"))
     end
 
     # Spit tarballs to be hosted out to local temporary directory:
@@ -56,7 +56,8 @@ for dir in readdir(data_dir)
 
         # Bind this to an Artifacts.toml file
         @info("Binding $(dir) in Artifacts.toml...")
-        bind_artifact!(joinpath(@__DIR__, "..", "Artifacts.toml"), dir, hash; download_info=[(tarball_url, tarball_hash)], lazy=true, force=true)
+        bind_artifact!(joinpath(@__DIR__, "..", "Artifacts.toml"), dir, hash;
+                       download_info=[(tarball_url, tarball_hash)], lazy=true, force=true)
     end
 end
 
@@ -64,7 +65,7 @@ if deploy
     # Upload tarballs to a special github release
     @info("Uploading tarballs to $(deploy_repo) tag `$(tag)`")
     ghr() do ghr_exe
-        run(`$ghr_exe -replace -u $(dirname(deploy_repo)) -r $(basename(deploy_repo)) $(tag) $(tmpdir)`)
+        return run(`$ghr_exe -replace -u $(dirname(deploy_repo)) -r $(basename(deploy_repo)) $(tag) $(tmpdir)`)
     end
 
     @info("Artifacts.toml file now contains all bound artifact names")
