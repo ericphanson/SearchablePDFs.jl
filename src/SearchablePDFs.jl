@@ -262,9 +262,10 @@ end
 Create a searchable version of a PDF.
 """
 @main function searchable(input_pdf::String,
-                          output_path::String=string(splitext(input_pdf)[1], "_OCR", ".pdf");
-                          apply_unpaper::Bool=false, ntasks::Int=Sys.CPU_THREADS - 1,
-                          tesseract_nthreads::Int=1, keep_intermediates::Bool=false,
+                          output_path::String=string(splitext(input_pdf)[1], "_OCR",
+                                                     ".pdf"); apply_unpaper::Bool=false,
+                          ntasks::Int=Sys.CPU_THREADS - 1, tesseract_nthreads::Int=1,
+                          keep_intermediates::Bool=false,
                           tmp::String=get_scratch_dir(input_pdf), quiet::Bool=false,
                           logfile::Union{Nothing,String}=nothing, force::Bool=false)
     # some of these are redundant with checks inside `ocr`; that's because we want to do them before the "Starting to ocr" message.

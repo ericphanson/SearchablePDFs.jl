@@ -11,11 +11,12 @@ TEST_PDF_RASTERIZED_PATH = joinpath(@__DIR__, "test_rasterized.pdf")
     @test SearchablePDFs.num_pages(TEST_PDF_PATH) == 3
 
     for verbose in (false, true), apply_unpaper in (false, true), f in (searchable, ocr)
-        kwargs = f === searchable ? (; logfile=joinpath(@__DIR__, "test_logs.csv"), quiet=!verbose) :
+        kwargs = f === searchable ?
+                 (; logfile=joinpath(@__DIR__, "test_logs.csv"), quiet=!verbose) :
                  (; verbose=verbose)
 
-        result = f(TEST_PDF_RASTERIZED_PATH, joinpath(@__DIR__, "out.pdf");
-                   apply_unpaper, kwargs...)
+        result = f(TEST_PDF_RASTERIZED_PATH, joinpath(@__DIR__, "out.pdf"); apply_unpaper,
+                   kwargs...)
         atexit(() -> rm(result.output_path; force=true)) # make sure we delete the file eventually, even if the tests throw
 
         @test isfile(result.output_path)
