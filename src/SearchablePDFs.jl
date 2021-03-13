@@ -261,16 +261,16 @@ end
 """
 Create a searchable version of a PDF.
 """
-@main function searchable(pdf::String,
-                          output_path::String=string(splitext(pdf)[1], "_OCR", ".pdf");
+@main function searchable(input_pdf::String,
+                          output_path::String=string(splitext(input_pdf)[1], "_OCR", ".pdf");
                           apply_unpaper::Bool=false, ntasks::Int=Sys.CPU_THREADS - 1,
                           tesseract_nthreads::Int=1, keep_intermediates::Bool=false,
-                          tmp::String=get_scratch_dir(pdf), quiet::Bool=false,
+                          tmp::String=get_scratch_dir(input_pdf), quiet::Bool=false,
                           logfile::Union{Nothing,String}=nothing, force::Bool=false)
     # some of these are redundant with checks inside `ocr`; that's because we want to do them before the "Starting to ocr" message.
-    isfile(pdf) || argument_error("Input file not found at `$pdf`")
+    isfile(input_pdf) || argument_error("Input file not found at `$(input_pdf)`")
     force || require_no_file(output_path)
-    require_extension(pdf, ".pdf")
+    require_extension(input_pdf, ".pdf")
     require_extension(output_path, ".pdf")
     if logfile !== nothing
         force || require_no_file(logfile)
@@ -278,8 +278,8 @@ Create a searchable version of a PDF.
     end
     verbose = !quiet
     verbose &&
-        println("Starting to ocr `$pdf`; result will be located at `$(output_path)`.")
-    result = ocr(pdf, output_path; apply_unpaper, ntasks, tesseract_nthreads,
+        println("Starting to ocr `$(input_pdf)`; result will be located at `$(output_path)`.")
+    result = ocr(input_pdf, output_path; apply_unpaper, ntasks, tesseract_nthreads,
                  cleanup_after=!keep_intermediates, cleanup_at_exit=!keep_intermediates,
                  tmp, verbose)
     verbose && println("\nOutput is located at `$(output_path)`.")

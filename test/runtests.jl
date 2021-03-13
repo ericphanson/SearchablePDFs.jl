@@ -2,6 +2,7 @@ using SearchablePDFs
 using SearchablePDFs: searchable
 using Test
 using Poppler_jll
+using Aqua
 
 TEST_PDF_PATH = joinpath(@__DIR__, "test.pdf")
 TEST_PDF_RASTERIZED_PATH = joinpath(@__DIR__, "test_rasterized.pdf")
@@ -10,10 +11,10 @@ TEST_PDF_RASTERIZED_PATH = joinpath(@__DIR__, "test_rasterized.pdf")
     @test SearchablePDFs.num_pages(TEST_PDF_PATH) == 3
 
     for verbose in (false, true), apply_unpaper in (false, true), f in (searchable, ocr)
-        kwargs = f === searchable ? (; logfile=joinpath(@__DIR__, "test_logs.csv")) :
-                 NamedTuple()
+        kwargs = f === searchable ? (; logfile=joinpath(@__DIR__, "test_logs.csv"), quiet=!verbose) :
+                 (; verbose=verbose)
 
-        result = f(TEST_PDF_RASTERIZED_PATH, joinpath(@__DIR__, "out.pdf"); verbose,
+        result = f(TEST_PDF_RASTERIZED_PATH, joinpath(@__DIR__, "out.pdf");
                    apply_unpaper, kwargs...)
         atexit(() -> rm(result.output_path; force=true)) # make sure we delete the file eventually, even if the tests throw
 
@@ -31,4 +32,8 @@ TEST_PDF_RASTERIZED_PATH = joinpath(@__DIR__, "test_rasterized.pdf")
         end
         rm(result.output_path)
     end
+end
+
+@testset "Aqua tests" begin
+    Aqua.test_all(SearchablePDFs; ambiguities=false)
 end
