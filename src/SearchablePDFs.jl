@@ -56,18 +56,16 @@ end
 #####
 
 # Use Poppler to extract the image
-function get_images(pdf, page_range::UnitRange{Int}, tmp)
+function get_images(pdf, page_range::UnitRange{Int}, tmp, total_pages)
     local logs
     Poppler_jll.pdftoppm() do pdftoppm
         return logs = run_and_collect_logs(`$pdftoppm -f $(first(page_range)) -l $(last(page_range)) $pdf -tiff -forcenum $(tmp)/page`)
     end
     @debug "`pdftoppm`" logs
-    paths = [joinpath(tmp, string("page-", lpad(page, 3, '0'), ".tif"))
+    paths = [joinpath(tmp, string("page-", lpad(page, ndigits(total_pages), '0'), ".tif"))
              for page in page_range]
     return paths, (; binary="pdftoppm", logs...)
 end
-
-get_images(pdf, page::Int, tmp) = get_images(pdf, page:page, tmp)
 
 # Clean up an image with unpaper
 function unpaper(img)
@@ -142,7 +140,8 @@ end
 """
     ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper=false,
              ntasks=Sys.CPU_THREADS - 1, tesseract_nthreads=1, pages=num_pages(pdf),
-             cleanup_after=true, tmp=get_scratch_dir(pdf), show_progress=true)
+             cleanup_after=true, cleanup_at_exit=true, tmp=get_scratch_dir(pdf),
+             verbose=true)
 
 Reads in a PDF located at `pdf`, uses Tesseract to OCR each page and combines the results into a pdf located `output_path`.
 
@@ -151,24 +150,32 @@ Keyword arguments:
 * `ntasks`: how many parallel tasks to use for launching `tesseract` and `pdftoppm`.
 * `tesseract_nthreads`: how many threads to direct Tesseract to use
 * `apply_unpaper`: whether or not to apply `unpaper` to try to improve the image quality
-* `tmp`: a directory to store intermediate files. This directory is deleted at the end of the script if `cleanup_after` is set to `true`.
-* `pages`: the number of pages of the PDF to process. It can help in debugging to set this to something small.
-* `show_progress`: show a progress bar for each step of the process.
+* `tmp`: a directory to store intermediate files. This directory is deleted at the end of the function if `cleanup_after` is set to `true`, and when the Julia session is ended if `cleanup_at_exit` is set to `true`.
+* `pages=nothing`: the number of pages of the PDF to process; the default of `nothing` indicates all pages in the PDF. It can help in debugging to set this to something small.
+* `verbose`: show a progress bar for each step of the process.
 
 Set `ENV["JULIA_DEBUG"] = SearchablePDFs` to see (many) debug messages.
 """
 function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper=false,
-             ntasks=Sys.CPU_THREADS - 1, tesseract_nthreads=1, pages=num_pages(pdf),
-             cleanup_after=true, tmp=get_scratch_dir(pdf), show_progress=true)
+             ntasks=Sys.CPU_THREADS - 1, tesseract_nthreads=1, pages=nothing,
+             cleanup_after=true, cleanup_at_exit=true, tmp=get_scratch_dir(pdf),
+             verbose=true)
     isfile(pdf) || throw(ArgumentError("File not found at $pdf"))
-    ext = splitexp(pdf)[2]
-    ext == "pdf" || throw(ArgumentError("Expected file extension `pdf`; got $ext"))
+    ext = splitext(pdf)[2]
+    ext == ".pdf" || throw(ArgumentError("Expected file extension `.pdf`; got $ext"))
 
-    # 1k page limit due to `pdftoppm` numbering by 001, 002, etc.
-    # should be workaround-able...
-    pages < 1000 || throw(ArgumentError("PDF must have less than 1000 pages"))
+    total_pages = num_pages(pdf)
+
+    if pages === nothing
+        pages = total_pages
+    elseif pages > total_pages
+        throw(ArgumentError("`pages` must be less than the total number of pages ($(total_pages))"))
+    end
 
     mkpath(tmp)
+    if cleanup_at_exit
+        atexit(() -> rm(tmp; force=true, recursive=true))
+    end
 
     @debug "Found file" pdf pages tmp
 
@@ -178,19 +185,19 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
 
     @debug "Generating images..."
     img_paths = String[]
-    imag_prog = Progress(pages; desc="(1/3) Extracting images: ", disable=!show_progress)
+    imag_prog = Progress(pages; desc="(1/3) Extracting images: ", enabled=verbose)
     # we don't need the results so this could be an `async_foreach` if that existed;
     # the `ntasks` load balancing is nice though, so let's just reuse this.
-    asyncmap(Iterators.partition(1:pages, 20); ntasks) do current_pages
-        paths, pdftoppm_logs = get_images(pdf, page_range, tmp)
+    asyncmap(Iterators.partition(1:pages, 20); ntasks) do page_range
+        paths, pdftoppm_logs = get_images(pdf, page_range, tmp, total_pages)
         append!(img_paths, paths)
-        push!(all_logs, (; page=current_pages, pdftoppm_logs...))
-        next!(imag_prog; step=length(current_pages))
+        push!(all_logs, (; page=page_range, pdftoppm_logs...))
+        next!(imag_prog; step=length(page_range))
         return nothing
     end
 
     @debug "Finished generating images. Starting tesseracting..."
-    ocr_prog = Progress(pages; desc="(2/3) OCRing: ", disable=!show_progress)
+    ocr_prog = Progress(pages; desc="(2/3) OCRing: ", enabled=verbose)
     pdfs = asyncmap(enumerate(img_paths); ntasks) do (page, img)
         @debug "img" page img
         if apply_unpaper
@@ -207,7 +214,7 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
     mkpath(unite_dir)
     max_files = 100
     unite_prog = Progress(pages + cld(pages, max_files) + 1;
-                          desc="(3/3) Collecting pages: ", disable=!show_progress)
+                          desc="(3/3) Collecting pages: ", enabled=verbose)
     recursive_unite_pdfs!(unite_prog, all_logs, unite_dir, pdfs, output_path; max_files)
     @debug "Done uniting pdfs"
     if cleanup_after
@@ -215,6 +222,9 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
         rm(tmp; recursive=true, force=true)
     end
     @debug "Done"
+    if verbose
+        isfile(output_path) || @error "File was not generated, check the logs!"
+    end
     return (; output_path, logs=all_logs)
 end
 
