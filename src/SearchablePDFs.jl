@@ -95,7 +95,7 @@ end
 
 # Chain it all together
 """
-    ocr(pdf, output_path = string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper = false, ntasks = (Sys.CPU_THREADS ÷ 2) - 1)
+    ocr(pdf, output_path = string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper = false, ntasks = Sys.CPU_THREADS-1)
 
 Reads in a PDF located at `pdf`, uses Tesseract to OCR each page and combines the results into a pdf located `output_path`.
 
@@ -104,20 +104,25 @@ Keyword arguments:
 * `apply_unpaper`:
 * `ntasks`:
 * `tesseract_nthreads`
+* `cleanup_after`
+* `tmp`
 
 """
-function ocr(pdf, output_path = string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper = false, ntasks = (Sys.CPU_THREADS ÷ 2) - 1, capture_logs = true, tesseract_nthreads=1, pages = num_pages(pdf), cleanup_after=true)
-    isfile(pdf) || throw(ArgumentError("PDF file not found at $pdf"))
+function ocr(pdf, output_path = string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper = false, ntasks = Sys.CPU_THREADS-1, capture_logs = true, tesseract_nthreads=1, pages = num_pages(pdf), cleanup_after=true, tmp = joinpath(@get_scratch!("pdf_tmps"), splitext(basename(pdf))[1] * "_" * string(rand(1:1000))))
+    isfile(pdf) || throw(ArgumentError("File not found at $pdf"))
+    ext = splitexp(pdf)[2]
+    ext == "pdf" || throw(ArgumentError("Expected file extension `pdf`; got $ext"))
+    
+    # 1k page limit due to `pdftoppm` numbering by 001, 002, etc.
+    # should be workaround-able...
     pages < 1000 || throw(ArgumentError("PDF must have less than 1000 pages"))
+
+    @debug "Found file" pdf pages tmp
+
     all_logs = @NamedTuple{page::Union{Int, UnitRange{Int}, Missing}, binary::String, stdout::String, stderr::String, code::Int}[]
     sizehint!(all_logs, pages+2)
 
-    @debug "Found file" pdf pages
-
-    tmp = joinpath(@get_scratch!("pdf_tmps"), splitext(basename(pdf))[1] * "_" * string(rand(1:1000)))
     mkpath(tmp)
-
-    @debug "Working in tempdir" tmp
 
     @debug "Generating images..."
     imag_prog = Progress(pages; desc="(1/3) Extracting images: ")
