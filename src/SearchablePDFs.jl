@@ -141,7 +141,8 @@ end
 # unites all the pdfs in `pdfs` recursively, `max_files` at a time.
 # I ran into "too many open files" errors otherwise
 # (which seems weird... maybe <https://github.com/JuliaLang/julia/issues/31126>? It was on MacOS)
-function recursive_unite_pdfs!(unite_prog, all_logs, tmp, pdfs, output_path; max_files_per_unite=100)
+function recursive_unite_pdfs!(unite_prog, all_logs, tmp, pdfs, output_path;
+                               max_files_per_unite=100)
     if length(pdfs) <= max_files_per_unite
         unite_logs = unite_pdfs(pdfs, output_path)
         push!(all_logs, (; page=missing, unite_logs...))
@@ -190,7 +191,7 @@ Set `ENV["JULIA_DEBUG"] = SearchablePDFs` to see (many) debug messages.
 function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper=false,
              ntasks=Sys.CPU_THREADS - 1, tesseract_nthreads=1, pages=nothing,
              cleanup_after=true, cleanup_at_exit=true, tmp=get_scratch_dir(pdf),
-             verbose=true, force=false, max_files_per_unite = 100)
+             verbose=true, force=false, max_files_per_unite=100)
     isfile(pdf) || argument_error("Input file not found at `$pdf`"; exception=true)
     force || require_no_file(output_path; exception=true)
     require_extension(pdf, ".pdf"; exception=true)
@@ -246,7 +247,8 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
     unite_dir = joinpath(tmp, "unite")
     unite_prog = Progress(pages + cld(pages, max_files_per_unite) + 1;
                           desc="(3/3) Collecting pages: ", enabled=verbose)
-    recursive_unite_pdfs!(unite_prog, all_logs, unite_dir, pdfs, output_path; max_files_per_unite)
+    recursive_unite_pdfs!(unite_prog, all_logs, unite_dir, pdfs, output_path;
+                          max_files_per_unite)
     @debug "Done uniting pdfs"
     if cleanup_after
         @debug "Cleaning up"
