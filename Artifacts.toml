@@ -16,7 +16,6 @@ lazy = true
 
 [tessdata_fast]
 git-tree-sha1 = "8d9094c67ba77459bd6326b07f47c4aba24fa004"
-lazy = true
 
     [[tessdata_fast.download]]
     sha256 = "b97ddd54b0f190bf56d952ac9e3c9cda643537fd98c3122c457097074d9363ee"

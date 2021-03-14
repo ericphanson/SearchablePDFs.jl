@@ -4,6 +4,8 @@ authors = ["Eric P. Hanson"]
 version = "0.1.0"
 
 [deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+Comonicon = "863f3e99-da2a-4334-8734-de3dacbe5542"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Poppler_jll = "9c32591e-4766-534b-9725-b71a8799265b"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
@@ -13,12 +15,19 @@ Tesseract_jll = "efd95c89-babc-5260-8753-618084eaf9d7"
 unpaper_jll = "d52248c9-e08a-51c2-9066-05d0bf3e6245"
 
 [compat]
+Aqua = "0.5"
+CSV = "0.8"
+Comonicon = "0.10"
+Poppler_jll = "0.87"
 ProgressMeter = "1.5"
 Scratch = "1"
+Tesseract_jll = "4.1.1"
 julia = "1.5"
+unpaper_jll = "6.1.0"
 
 [extras]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Aqua", "Test"]

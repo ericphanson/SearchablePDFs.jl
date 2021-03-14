@@ -6,3 +6,5 @@ Manifest.toml
 /data
 /test/test_rasterized_OCR.pdf
 /files
+/build
+deps/build.log
