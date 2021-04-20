@@ -75,7 +75,7 @@ function num_pages(pdf)
     result = Poppler_jll.pdfinfo() do pdfinfo
         return read(`$pdfinfo $pdf`, String)
     end
-    m = match(r"Pages\:\s*([1-9]*)", result)
+    m = match(r"Pages\:\s*([0-9]*)", result)
     return parse(Int, m.captures[1])
 end
 
