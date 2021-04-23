@@ -142,17 +142,18 @@ end
 # I ran into "too many open files" errors otherwise
 # (which seems weird... maybe <https://github.com/JuliaLang/julia/issues/31126>? It was on MacOS)
 function unite_many_pdfs!(unite_progress_meter, all_logs, tmp, pdfs, output_path;
-                               max_files_per_unite=100)
+                          max_files_per_unite=100)
     isdir(tmp) || mkdir(tmp)
 
-    output_paths = map(enumerate(Iterators.partition(pdfs, max_files_per_unite))) do (i, current_pdfs)
+    output_paths = map(enumerate(Iterators.partition(pdfs, max_files_per_unite))) do (i,
+                                                                                      current_pdfs)
         current_output_path = joinpath(tmp, string("section_", i, ".pdf"))
         unite_logs = unite_pdfs(current_pdfs, current_output_path)
         put!(all_logs, (; page=missing, unite_logs...))
         next!(unite_progress_meter; step=length(current_pdfs))
         return current_output_path
     end
-    
+
     unite_logs = unite_pdfs(output_paths, output_path)
     put!(all_logs, (; page=missing, unite_logs...))
 
@@ -209,7 +210,7 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
     @debug "Found file" pdf pages tmp
 
     all_logs = Channel{@NamedTuple{page::Union{Int,UnitRange{Int},Missing},binary::String,
-                           stdout::String,stderr::String,code::Int}}(Inf)
+                                   stdout::String,stderr::String,code::Int}}(Inf)
 
     @debug "Generating images..."
     imag_prog = Progress(pages; desc="(1/3) Extracting images: ", enabled=verbose)
@@ -239,9 +240,9 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
     @debug "Finished processing pages. Uniting..."
     unite_dir = joinpath(tmp, "unite")
     unite_progress_meter = Progress(pages + cld(pages, max_files_per_unite) + 1;
-                          desc="(3/3) Collecting pages: ", enabled=verbose)
+                                    desc="(3/3) Collecting pages: ", enabled=verbose)
     unite_many_pdfs!(unite_progress_meter, all_logs, unite_dir, pdfs, output_path;
-                          max_files_per_unite)
+                     max_files_per_unite)
     @debug "Done uniting pdfs"
     if cleanup_after
         @debug "Cleaning up"
