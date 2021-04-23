@@ -138,30 +138,26 @@ function unite_pdfs(pdfs, output)
     return (; binary="pdfunite", logs...)
 end
 
-# unites all the pdfs in `pdfs` recursively, `max_files` at a time.
+# unites all the pdfs in `pdfs`, `max_files` at a time.
 # I ran into "too many open files" errors otherwise
 # (which seems weird... maybe <https://github.com/JuliaLang/julia/issues/31126>? It was on MacOS)
-function recursive_unite_pdfs!(unite_prog, all_logs, tmp, pdfs, output_path;
-                               max_files_per_unite=100)
-    if length(pdfs) <= max_files_per_unite
-        unite_logs = unite_pdfs(pdfs, output_path)
-        push!(all_logs, (; page=missing, unite_logs...))
-        next!(unite_prog; step=length(pdfs))
-        return nothing
+function unite_many_pdfs!(unite_progress_meter, all_logs, tmp, pdfs, output_path;
+                          max_files_per_unite=100)
+    isdir(tmp) || mkdir(tmp)
+
+    output_paths = map(enumerate(Iterators.partition(pdfs, max_files_per_unite))) do (i,
+                                                                                      current_pdfs)
+        current_output_path = joinpath(tmp, string("section_", i, ".pdf"))
+        unite_logs = unite_pdfs(current_pdfs, current_output_path)
+        put!(all_logs, (; page=missing, unite_logs...))
+        next!(unite_progress_meter; step=length(current_pdfs))
+        return current_output_path
     end
-    # we have many pdfs; make sure `tmp` is an actual directory so we can use it
-    # to save intermediate files.
-    mkpath(tmp)
-    partially_united_pdfs = String[]
-    for current_pdfs in Iterators.partition(pdfs, max_files_per_unite)
-        new_tmp = mktempdir(tmp)
-        out_path = joinpath(new_tmp, "out.pdf")
-        recursive_unite_pdfs!(unite_prog, all_logs, new_tmp, current_pdfs, out_path;
-                              max_files_per_unite)
-        push!(partially_united_pdfs, out_path)
-    end
-    recursive_unite_pdfs!(unite_prog, all_logs, tmp, partially_united_pdfs, output_path;
-                          max_files_per_unite)
+
+    unite_logs = unite_pdfs(output_paths, output_path)
+    put!(all_logs, (; page=missing, unite_logs...))
+
+    next!(unite_progress_meter; step=length(output_paths))
     return nothing
 end
 
@@ -213,22 +209,20 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
 
     @debug "Found file" pdf pages tmp
 
-    all_logs = @NamedTuple{page::Union{Int,UnitRange{Int},Missing},binary::String,
-                           stdout::String,stderr::String,code::Int}[]
-    sizehint!(all_logs, pages + 2)
+    all_logs = Channel{@NamedTuple{page::Union{Int,UnitRange{Int},Missing},binary::String,
+                                   stdout::String,stderr::String,code::Int}}(Inf)
 
     @debug "Generating images..."
-    img_paths = String[]
     imag_prog = Progress(pages; desc="(1/3) Extracting images: ", enabled=verbose)
-    # we don't need the results so this could be an `async_foreach` if that existed;
-    # the `ntasks` load balancing is nice though, so let's just reuse this.
-    asyncmap(Iterators.partition(1:pages, 20); ntasks) do page_range
+
+    img_paths_grps = asyncmap(Iterators.partition(1:pages, 20); ntasks) do page_range
         paths, pdftoppm_logs = get_images(pdf, page_range, tmp, total_pages)
-        append!(img_paths, paths)
-        push!(all_logs, (; page=page_range, pdftoppm_logs...))
+        put!(all_logs, (; page=page_range, pdftoppm_logs...))
         next!(imag_prog; step=length(page_range))
-        return nothing
+        return paths
     end
+
+    img_paths = reduce(vcat, img_paths_grps)
 
     @debug "Finished generating images. Starting tesseracting..."
     ocr_prog = Progress(pages; desc="(2/3) OCRing: ", enabled=verbose)
@@ -236,19 +230,19 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
         @debug "img" page img
         if apply_unpaper
             img, unpaper_logs = unpaper(img)
-            push!(all_logs, (; page, unpaper_logs...))
+            put!(all_logs, (; page, unpaper_logs...))
         end
         pdf, tesseract_logs = make_pdf(img; tesseract_nthreads)
-        push!(all_logs, (; page, tesseract_logs...))
+        put!(all_logs, (; page, tesseract_logs...))
         next!(ocr_prog)
         return pdf
     end
     @debug "Finished processing pages. Uniting..."
     unite_dir = joinpath(tmp, "unite")
-    unite_prog = Progress(pages + cld(pages, max_files_per_unite) + 1;
-                          desc="(3/3) Collecting pages: ", enabled=verbose)
-    recursive_unite_pdfs!(unite_prog, all_logs, unite_dir, pdfs, output_path;
-                          max_files_per_unite)
+    unite_progress_meter = Progress(pages + cld(pages, max_files_per_unite) + 1;
+                                    desc="(3/3) Collecting pages: ", enabled=verbose)
+    unite_many_pdfs!(unite_progress_meter, all_logs, unite_dir, pdfs, output_path;
+                     max_files_per_unite)
     @debug "Done uniting pdfs"
     if cleanup_after
         @debug "Cleaning up"
@@ -258,7 +252,8 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
     if verbose
         isfile(output_path) || @error "File was not generated, check the logs!"
     end
-    return (; output_path, logs=all_logs, tmp)
+    close(all_logs)
+    return (; output_path, logs=collect(all_logs), tmp)
 end
 
 #####
