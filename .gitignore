@@ -8,3 +8,4 @@ Manifest.toml
 /files
 /build
 deps/build.log
+deps/lib
