@@ -72,9 +72,7 @@ end
 
 # There's gotta be a better way...
 function num_pages(pdf)
-    result = Poppler_jll.pdfinfo() do pdfinfo
-        return read(`$pdfinfo $pdf`, String)
-    end
+    result = read(`$(Poppler_jll.pdfinfo()) $pdf`, String)
     m = match(r"Pages\:\s*([0-9]*)", result)
     return parse(Int, m.captures[1])
 end
@@ -85,10 +83,7 @@ end
 
 # Use Poppler to extract the image
 function get_images(pdf, page_range::UnitRange{Int}, tmp, total_pages)
-    local logs
-    Poppler_jll.pdftoppm() do pdftoppm
-        return logs = run_and_collect_logs(`$pdftoppm -f $(first(page_range)) -l $(last(page_range)) $pdf -tiff -forcenum $(tmp)/page`)
-    end
+    logs = run_and_collect_logs(`$(Poppler_jll.pdftoppm()) -f $(first(page_range)) -l $(last(page_range)) $pdf -tiff -forcenum $(tmp)/page`)
     @debug "`pdftoppm`" logs
     paths = [joinpath(tmp, string("page-", lpad(page, ndigits(total_pages), '0'), ".tif"))
              for page in page_range]
@@ -97,12 +92,9 @@ end
 
 # Clean up an image with unpaper
 function unpaper(img)
-    local logs
     img_base, img_ext = splitext(img)
     img_unpaper = img_base * "_unpaper" * img_ext
-    unpaper_jll.unpaper() do unpaper
-        return logs = run_and_collect_logs(`$unpaper $img $img_unpaper`)
-    end
+    logs = run_and_collect_logs(`$(unpaper_jll.unpaper()) $img $img_unpaper`)
     return (; img_unpaper, logs=(; binary="unpaper", logs...))
 end
 
@@ -114,15 +106,11 @@ function make_pdf(img; tesseract_nthreads)
     data_path = get_data_path() * "/"
     img_base, img_ext = splitext(img)
     output = img_base
-    local logs
-    withenv("OMP_THREAD_LIMIT" => tesseract_nthreads) do
-        Tesseract_jll.tesseract() do tesseract
-            cmd = `$tesseract -l eng+equ --tessdata-dir $data_path $img $output -c tessedit_create_pdf=1`
-            @debug "Tesseracting!" img
-            logs = run_and_collect_logs(cmd)
-            @debug logs
-        end
-    end
+    tesseract = addenv(Tesseract_jll.tesseract(), "OMP_THREAD_LIMIT" => tesseract_nthreads)
+    cmd = `$tesseract -l eng+equ --tessdata-dir $data_path $img $output -c tessedit_create_pdf=1`
+    @debug "Tesseracting!" img
+    logs = run_and_collect_logs(cmd)
+    @debug logs
     return (; pdf=output * ".pdf", logs=(; binary="tesseract", logs...))
 end
 
@@ -131,10 +119,7 @@ end
 #####
 
 function unite_pdfs(pdfs, output)
-    local logs
-    Poppler_jll.pdfunite() do pdfunite
-        return logs = run_and_collect_logs(`$pdfunite $pdfs $output`)
-    end
+    logs = run_and_collect_logs(`$(Poppler_jll.pdfunite()) $pdfs $output`)
     return (; binary="pdfunite", logs...)
 end
 
