@@ -16,7 +16,7 @@ unpaper_jll = "d52248c9-e08a-51c2-9066-05d0bf3e6245"
 
 [compat]
 Aqua = "0.5"
-CSV = "0.8"
+CSV = "0.8, 0.9"
 Comonicon = "0.11"
 Poppler_jll = "0.87"
 ProgressMeter = "1.5"
