@@ -27,7 +27,7 @@ license, which is the usual one in the Julia community.
 
 ## Status
 
-It more-or-less works on the test file on MacOS and Linux.
+It more-or-less works on MacOS (both Intel and Apple Silicon) and Linux.
 
 Next steps:
 
