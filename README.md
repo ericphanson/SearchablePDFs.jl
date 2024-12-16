@@ -42,10 +42,6 @@ Next steps:
 using SearchablePDFs
 file = ocr("test/test_rasterized.pdf")
 ```
+or use `searchable`.
 
-Call
-```julia
-using SearchablePDFs
-SearchablePDFs.comonicon_install()
-```
-to install a CLI script powered by [Comonicon.jl](https://github.com/comonicon/Comonicon.jl) to `~/.julia/bin/searchable`. Add that folder to your PATH to be able to use `searchable` as an executable.
+TODO- CLI using `@main`.
