@@ -129,7 +129,7 @@ end
 ##### Step 2: Use tesseract to generate a one-page searchable PDF from an image
 #####
 
-function make_pdf(img; tesseract_nthreads; exit_on_error)
+function make_pdf(img; tesseract_nthreads, exit_on_error)
     data_path = get_data_path() * "/"
     img_base, img_ext = splitext(img)
     output = img_base
@@ -166,7 +166,7 @@ function unite_many_pdfs!(unite_progress_meter, all_logs, tmp, pdfs, output_path
         return current_output_path
     end
 
-    unite_logs = unite_pdfs(output_paths, output_path)
+    unite_logs = unite_pdfs(output_paths, output_path; exit_on_error)
     put!(all_logs, (; page=missing, unite_logs...))
 
     next!(unite_progress_meter; step=length(output_paths))
