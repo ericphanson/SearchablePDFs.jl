@@ -72,7 +72,7 @@ function get_scratch_dir(pdf)
 end
 
 # https://discourse.julialang.org/t/collecting-all-output-from-shell-commands/15592/7
-function run_and_collect_logs(cmd::Cmd)
+function run_and_collect_logs(cmd::Cmd; exit_on_error)
     oc = OutputCollector(cmd)
     succeeded = wait(oc)
     code = oc.P.exitcode
@@ -80,7 +80,7 @@ function run_and_collect_logs(cmd::Cmd)
     if !succeeded
         command_error("""Command failed with exitcode $code
 
-        $str""")
+        $str"""; exit_on_error)
     end
     return (output=str, code)
 end
@@ -108,8 +108,9 @@ end
 #####
 
 # Use Poppler to extract the image
-function get_images(pdf, page_range::UnitRange{Int}, tmp, total_pages)
-    logs = run_and_collect_logs(`$(Poppler_jll.pdftoppm()) -f $(first(page_range)) -l $(last(page_range)) $pdf -tiff -forcenum $(tmp)/page`)
+function get_images(pdf, page_range::UnitRange{Int}, tmp, total_pages; exit_on_error)
+    logs = run_and_collect_logs(`$(Poppler_jll.pdftoppm()) -f $(first(page_range)) -l $(last(page_range)) $pdf -tiff -forcenum $(tmp)/page`;
+                                exit_on_error)
     @debug "`pdftoppm`" logs
     paths = [joinpath(tmp, string("page-", lpad(page, ndigits(total_pages), '0'), ".tif"))
              for page in page_range]
@@ -117,10 +118,10 @@ function get_images(pdf, page_range::UnitRange{Int}, tmp, total_pages)
 end
 
 # Clean up an image with unpaper
-function unpaper(img)
+function unpaper(img; exit_on_error)
     img_base, img_ext = splitext(img)
     img_unpaper = img_base * "_unpaper" * img_ext
-    logs = run_and_collect_logs(`$(unpaper_jll.unpaper()) $img $img_unpaper`)
+    logs = run_and_collect_logs(`$(unpaper_jll.unpaper()) $img $img_unpaper`; exit_on_error)
     return (; img_unpaper, logs=(; binary="unpaper", logs...))
 end
 
@@ -128,14 +129,14 @@ end
 ##### Step 2: Use tesseract to generate a one-page searchable PDF from an image
 #####
 
-function make_pdf(img; tesseract_nthreads)
+function make_pdf(img; tesseract_nthreads; exit_on_error)
     data_path = get_data_path() * "/"
     img_base, img_ext = splitext(img)
     output = img_base
     tesseract = addenv(Tesseract_jll.tesseract(), "OMP_THREAD_LIMIT" => tesseract_nthreads)
     cmd = `$tesseract -l eng+equ --tessdata-dir $data_path $img $output -c tessedit_create_pdf=1`
     @debug "Tesseracting!" img
-    logs = run_and_collect_logs(cmd)
+    logs = run_and_collect_logs(cmd; exit_on_error)
     @debug logs
     return (; pdf=output * ".pdf", logs=(; binary="tesseract", logs...))
 end
@@ -144,8 +145,8 @@ end
 ##### Step 3: collect all the PDFs into one with `pdfunite`
 #####
 
-function unite_pdfs(pdfs, output)
-    logs = run_and_collect_logs(`$(Poppler_jll.pdfunite()) $pdfs $output`)
+function unite_pdfs(pdfs, output; exit_on_error)
+    logs = run_and_collect_logs(`$(Poppler_jll.pdfunite()) $pdfs $output`; exit_on_error)
     return (; binary="pdfunite", logs...)
 end
 
@@ -153,13 +154,13 @@ end
 # I ran into "too many open files" errors otherwise
 # (which seems weird... maybe <https://github.com/JuliaLang/julia/issues/31126>? It was on MacOS)
 function unite_many_pdfs!(unite_progress_meter, all_logs, tmp, pdfs, output_path;
-                          max_files_per_unite=100)
+                          max_files_per_unite=100, exit_on_error)
     isdir(tmp) || mkdir(tmp)
 
     output_paths = map(enumerate(Iterators.partition(pdfs, max_files_per_unite))) do (i,
                                                                                       current_pdfs)
         current_output_path = joinpath(tmp, string("section_", i, ".pdf"))
-        unite_logs = unite_pdfs(current_pdfs, current_output_path)
+        unite_logs = unite_pdfs(current_pdfs, current_output_path; exit_on_error)
         put!(all_logs, (; page=missing, unite_logs...))
         next!(unite_progress_meter; step=length(current_pdfs))
         return current_output_path
@@ -227,7 +228,7 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
     imag_prog = Progress(pages; desc="(1/3) Extracting images: ", enabled=verbose)
 
     img_paths_grps = asyncmap(Iterators.partition(1:pages, 20); ntasks) do page_range
-        paths, pdftoppm_logs = get_images(pdf, page_range, tmp, total_pages)
+        paths, pdftoppm_logs = get_images(pdf, page_range, tmp, total_pages; exit_on_error)
         put!(all_logs, (; page=page_range, pdftoppm_logs...))
         next!(imag_prog; step=length(page_range))
         return paths
@@ -240,10 +241,10 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
     pdfs = asyncmap(enumerate(img_paths); ntasks) do (page, img)
         @debug "img" page img
         if apply_unpaper
-            img, unpaper_logs = unpaper(img)
+            img, unpaper_logs = unpaper(img; exit_on_error)
             put!(all_logs, (; page, unpaper_logs...))
         end
-        pdf, tesseract_logs = make_pdf(img; tesseract_nthreads)
+        pdf, tesseract_logs = make_pdf(img; tesseract_nthreads, exit_on_error)
         put!(all_logs, (; page, tesseract_logs...))
         next!(ocr_prog)
         return pdf
@@ -253,7 +254,7 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
     unite_progress_meter = Progress(pages + cld(pages, max_files_per_unite) + 1;
                                     desc="(3/3) Collecting pages: ", enabled=verbose)
     unite_many_pdfs!(unite_progress_meter, all_logs, unite_dir, pdfs, output_path;
-                     max_files_per_unite)
+                     max_files_per_unite, exit_on_error)
     @debug "Done uniting pdfs"
     if cleanup_after
         @debug "Cleaning up"

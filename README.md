@@ -42,6 +42,5 @@ Next steps:
 using SearchablePDFs
 file = ocr("test/test_rasterized.pdf")
 ```
-or use `searchable`.
 
 TODO- CLI using `@main`.
