@@ -3,6 +3,7 @@ module SearchablePDFs
 using Pkg
 using Pkg.Artifacts
 using Random
+using OutputCollectors
 
 using ProgressMeter
 using Scratch
@@ -57,16 +58,17 @@ end
 
 # https://discourse.julialang.org/t/collecting-all-output-from-shell-commands/15592/7
 function run_and_collect_logs(cmd::Cmd)
-    out = Pipe()
-    err = Pipe()
-    process = run(pipeline(cmd; stdout=out, stderr=err); wait=false)
-    close(out.in)
-    close(err.in)
+    oc = OutputCollector(cmd)
+    succeeded = wait(oc)
+    code = oc.P.exitcode
+    str = merge(oc)
+    if !succeeded
+        error("""Command failed with exitcode $code
 
-    stdout = @async String(read(out))
-    stderr = @async String(read(err))
-    wait(process)
-    return (stdout=fetch(stdout), stderr=fetch(stderr), code=process.exitcode)
+        $str
+        """)
+    end
+    return (output=str, code)
 end
 
 # There's gotta be a better way...
@@ -154,7 +156,7 @@ end
              ntasks=Sys.CPU_THREADS - 1, tesseract_nthreads=1, pages=num_pages(pdf),
              cleanup_after=true, cleanup_at_exit=true, tmp=get_scratch_dir(pdf),
              verbose=true)
-             
+
 Reads in a PDF located at `pdf`, uses Tesseract to OCR each page and combines the results into a pdf located `output_path`.
 
 Keyword arguments:
@@ -194,7 +196,7 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
     @debug "Found file" pdf pages tmp
 
     all_logs = Channel{@NamedTuple{page::Union{Int,UnitRange{Int},Missing}, binary::String,
-        stdout::String, stderr::String, code::Int}}(Inf)
+        output::String, code::Int}}(Inf)
 
     @debug "Generating images..."
     imag_prog = Progress(pages; desc="(1/3) Extracting images: ", enabled=verbose)

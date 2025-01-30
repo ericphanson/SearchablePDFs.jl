@@ -10,7 +10,7 @@ TEST_PDF_RASTERIZED_PATH = joinpath(@__DIR__, "test_rasterized.pdf")
 @testset "SearchablePDFs.jl" begin
     @test SearchablePDFs.num_pages(TEST_PDF_PATH) == 3
 
-    for verbose in (false, true),
+    @testset "verbose=$verbose apply_unpaper=$apply_unpaper f=$f opt=$opt" for verbose in (false, true),
         apply_unpaper in (false, true),
         f in (searchable, ocr),
         opt in (true, false)
@@ -27,11 +27,12 @@ TEST_PDF_RASTERIZED_PATH = joinpath(@__DIR__, "test_rasterized.pdf")
         atexit(() -> rm(result.tmp; recursive=true, force=true))
         atexit(() -> rm(joinpath(@__DIR__, "test_logs.csv"); force=true))
 
+        if !isfile(result.output_path)
+            foreach(println, result.logs)
+        end
         @test isfile(result.output_path)
 
-        text = pdftotext() do exe
-            return read(`$exe $(result.output_path) -`, String)
-        end
+        text = read(`$(pdftotext()) $(result.output_path) -`, String)
 
         @test occursin("Chapter 9", text)
         @test occursin("evaluate expressions written in a source file", text)
