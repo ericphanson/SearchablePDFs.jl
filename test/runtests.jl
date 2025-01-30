@@ -14,22 +14,22 @@ unpaper_settings = SearchablePDFs.CAN_USE_UNPAPER ? (true, false) : (false,)
 
     @testset "verbose=$verbose apply_unpaper=$apply_unpaper f=$f opt=$opt" for verbose in
                                                                                (false,
-            true),
-        apply_unpaper in
-        unpaper_settings,
-        f in
-        (_main,
-            ocr),
-        opt in
-        (true, false)
+                                                                                true),
+                                                                               apply_unpaper in
+                                                                               unpaper_settings,
+                                                                               f in
+                                                                               (_main,
+                                                                                ocr),
+                                                                               opt in
+                                                                               (true, false)
 
         kwargs = f === _main ?
                  (; logfile=joinpath(@__DIR__, "test_logs.csv"), quiet=!verbose,
-            keep_intermediates=opt) :
+                  keep_intermediates=opt) :
                  (; verbose=verbose, max_files_per_unite=opt ? 2 : 100)
 
         result = f(TEST_PDF_RASTERIZED_PATH, joinpath(@__DIR__, "out.pdf"); apply_unpaper,
-            kwargs...)
+                   kwargs...)
         # make sure we delete the generated files eventually, even if the tests throw
         atexit(() -> rm(result.output_path; force=true))
         atexit(() -> rm(result.tmp; recursive=true, force=true))
@@ -58,7 +58,7 @@ unpaper_settings = SearchablePDFs.CAN_USE_UNPAPER ? (true, false) : (false,)
         @test require_extension("DOES_NOT_EXIST.pdf", ".pdf"; exit_on_error=false) ===
               nothing
         @test_throws ArgumentError require_extension("runtests.jl", ".pdf";
-            exit_on_error=false)
+                                                     exit_on_error=false)
     end
 end
 
