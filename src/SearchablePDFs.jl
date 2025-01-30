@@ -20,13 +20,13 @@ export ocr
 ##### Utilities
 #####
 
-function argument_error(msg; exception=isinteractive())
-    if exception
-        throw(ArgumentError(msg))
-    else
+function argument_error(msg; exit_on_error)
+    if exit_on_error
         printstyled("ERROR:"; bold=true, color=:red)
         printstyled(" ", msg, "\n"; color=:red)
         exit(1)
+    else
+        throw(ArgumentError(msg))
     end
 end
 
@@ -34,26 +34,26 @@ struct CommandError <: Exception
     msg::String
 end
 
-function command_error(msg; exception=isinteractive())
-    if exception
-        throw(CommandError(msg))
-    else
+function command_error(msg; exit_on_error)
+    if exit_on_error
         printstyled("ERROR:"; bold=true, color=:red)
         printstyled(" ", msg, "\n"; color=:red)
         exit(1)
+    else
+        throw(CommandError(msg))
     end
 end
 
-function require_extension(path, ext; exception=isinteractive())
+function require_extension(path, ext; exit_on_error)
     _ext = splitext(path)[2]
     _ext == ext ||
         argument_error("Expected $path to have file extension `$ext`; got `$(_ext)`";
-                       exception)
+            exit_on_error)
     return nothing
 end
 
-function require_no_file(path; exception=isinteractive())
-    isfile(path) && argument_error("File already exists at `$(path)`!"; exception)
+function require_no_file(path; exit_on_error)
+    isfile(path) && argument_error("File already exists at `$(path)`!"; exit_on_error)
     return nothing
 end
 
@@ -68,7 +68,7 @@ end
 # more in charge of the cleanup, which can be good for debugging.
 function get_scratch_dir(pdf)
     return joinpath(@get_scratch!("pdf_tmps"),
-                    splitext(basename(pdf))[1] * "_" * string(randstring(10)))
+        splitext(basename(pdf))[1] * "_" * string(randstring(10)))
 end
 
 # https://discourse.julialang.org/t/collecting-all-output-from-shell-commands/15592/7
@@ -80,17 +80,27 @@ function run_and_collect_logs(cmd::Cmd)
     if !succeeded
         command_error("""Command failed with exitcode $code
 
-        $str
-        """)
+        $str""")
     end
     return (output=str, code)
 end
 
 # There's gotta be a better way...
-function num_pages(pdf)
+function _num_pages(pdf)
     result = read(`$(Poppler_jll.pdfinfo()) $pdf`, String)
     m = match(r"Pages\:\s*([0-9]*)", result)
     return parse(Int, m.captures[1])
+end
+
+function num_pages(pdf; exit_on_error)
+    try
+        _num_pages(pdf)
+    catch e
+        command_error("""
+        Could not extract the number of pages from $(pdf).
+
+        $(sprint(Base.showerror, e))"""; exit_on_error)
+    end
 end
 
 #####
@@ -143,11 +153,11 @@ end
 # I ran into "too many open files" errors otherwise
 # (which seems weird... maybe <https://github.com/JuliaLang/julia/issues/31126>? It was on MacOS)
 function unite_many_pdfs!(unite_progress_meter, all_logs, tmp, pdfs, output_path;
-                          max_files_per_unite=100)
+    max_files_per_unite=100)
     isdir(tmp) || mkdir(tmp)
 
     output_paths = map(enumerate(Iterators.partition(pdfs, max_files_per_unite))) do (i,
-                                                                                      current_pdfs)
+        current_pdfs)
         current_output_path = joinpath(tmp, string("section_", i, ".pdf"))
         unite_logs = unite_pdfs(current_pdfs, current_output_path)
         put!(all_logs, (; page=missing, unite_logs...))
@@ -186,21 +196,21 @@ Keyword arguments:
 Set `ENV["JULIA_DEBUG"] = SearchablePDFs` to see (many) debug messages.
 """
 function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper=false,
-             ntasks=Sys.CPU_THREADS - 1, tesseract_nthreads=1, pages=nothing,
-             cleanup_after=true, cleanup_at_exit=true, tmp=get_scratch_dir(pdf),
-             verbose=true, force=false, max_files_per_unite=100)
-    isfile(pdf) || argument_error("Input file not found at `$pdf`"; exception=true)
-    force || require_no_file(output_path; exception=true)
-    require_extension(pdf, ".pdf"; exception=true)
-    require_extension(output_path, ".pdf"; exception=true)
+    ntasks=Sys.CPU_THREADS - 1, tesseract_nthreads=1, pages=nothing,
+    cleanup_after=true, cleanup_at_exit=true, tmp=get_scratch_dir(pdf),
+    verbose=true, force=false, max_files_per_unite=100,
+    exit_on_error=false)
+    isfile(pdf) || argument_error("Input file not found at `$pdf`"; exit_on_error)
+    force || require_no_file(output_path; exit_on_error)
+    require_extension(pdf, ".pdf"; exit_on_error)
+    require_extension(output_path, ".pdf"; exit_on_error)
 
-    total_pages = num_pages(pdf)
-
+    total_pages = num_pages(pdf; exit_on_error)
     if pages === nothing
         pages = total_pages
     elseif pages > total_pages
         argument_error("`pages` must be less than the total number of pages ($(total_pages))";
-                       exception=true)
+            exit_on_error)
     end
 
     mkpath(tmp)
@@ -210,8 +220,8 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
 
     @debug "Found file" pdf pages tmp
 
-    all_logs = Channel{@NamedTuple{page::Union{Int,UnitRange{Int},Missing},binary::String,
-                                   output::String,code::Int}}(Inf)
+    all_logs = Channel{@NamedTuple{page::Union{Int,UnitRange{Int},Missing}, binary::String,
+        output::String, code::Int}}(Inf)
 
     @debug "Generating images..."
     imag_prog = Progress(pages; desc="(1/3) Extracting images: ", enabled=verbose)
@@ -241,9 +251,9 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
     @debug "Finished processing pages. Uniting..."
     unite_dir = joinpath(tmp, "unite")
     unite_progress_meter = Progress(pages + cld(pages, max_files_per_unite) + 1;
-                                    desc="(3/3) Collecting pages: ", enabled=verbose)
+        desc="(3/3) Collecting pages: ", enabled=verbose)
     unite_many_pdfs!(unite_progress_meter, all_logs, unite_dir, pdfs, output_path;
-                     max_files_per_unite)
+        max_files_per_unite)
     @debug "Done uniting pdfs"
     if cleanup_after
         @debug "Cleaning up"
@@ -263,7 +273,7 @@ end
 
 CAN_USE_UNPAPER::Bool = unpaper_jll.is_available() && Sys.ARCH != :aarch64
 
-doc = """Searchable PDFs (OCR).
+doc::String = """Searchable PDFs (OCR).
 
 Usage:
   searchable-pdf <input_pdf> [<output_path>] [--apply_unpaper] [--keep_intermediates] [--quiet] [--force] [--logfile=<logfile>] [--tmp=<tmp>] [-n=<ntasks>] [-t=<tesseract_nthreads>]
@@ -287,10 +297,9 @@ Options:
 @doc doc
 function main(args=ARGS)
     parsed = docopt(doc, args; version=pkgversion(SearchablePDFs))
-    @show parsed
     input_pdf = parsed["<input_pdf>"]
     output_path = something(get(parsed, "<output_path>", nothing),
-                            string(splitext(input_pdf)[1], "_OCR", ".pdf"))
+        string(splitext(input_pdf)[1], "_OCR", ".pdf"))
 
     if parsed["--ntasks"] === nothing
         ntasks = Sys.CPU_THREADS - 1
@@ -299,61 +308,61 @@ function main(args=ARGS)
     end
 
     tesseract_nthreads = parse(Int, parsed["--tesseract_nthreads"])
-    result = searchable(input_pdf, output_path;
-                        apply_unpaper=parsed["--apply_unpaper"],
-                        ntasks,
-                        tesseract_nthreads,
-                        keep_intermediates=parsed["--keep_intermediates"],
-                        tmp=something(parsed["--tmp"], get_scratch_dir(input_pdf)),
-                        quiet=parsed["--quiet"],
-                        force=parsed["--force"],
-                        logfile=parsed["--logfile"])
+    result = _main(input_pdf, output_path;
+        apply_unpaper=parsed["--apply_unpaper"],
+        ntasks,
+        tesseract_nthreads,
+        keep_intermediates=parsed["--keep_intermediates"],
+        tmp=something(parsed["--tmp"], get_scratch_dir(input_pdf)),
+        quiet=parsed["--quiet"],
+        force=parsed["--force"],
+        logfile=parsed["--logfile"],
+        exit_on_error=true)
 
     all_success = all(==(0), (l.code for l in result.logs))
     all_success && isfile(output_path) && return 0
-    printstyled(stdout, "ERROR: Some step did not complete successfully. Printing logs.")
-    for log in result.logs
+    printstyled(stdout, "ERROR: Some step(s) did not complete successfully. Printing logs.")
+    for (idx, log) in enumerate(result.logs)
         page::Union{Int,UnitRange{Int},Missing}, binary::String,
         output::String, code::Int
         (; page, binary, output, code) = log
-        println("For binary $binary, page $page finished with code $code, and output:\n$output\n")
+        println("Step $idx. For binary $binary, page $page finished with exit code $code, and output:\n$output\n")
     end
     return 1
 end
 
-"""
-Create a searchable version of a PDF.
-"""
-function searchable(input_pdf::String,
-                    output_path::String=string(splitext(input_pdf)[1], "_OCR",
-                                               ".pdf"); apply_unpaper::Bool=false,
-                    ntasks::Int=Sys.CPU_THREADS - 1, tesseract_nthreads::Int=1,
-                    keep_intermediates::Bool=false,
-                    tmp::String=get_scratch_dir(input_pdf), quiet::Bool=false,
-                    logfile::Union{Nothing,String}=nothing, force::Bool=false)
+function _main(input_pdf::String,
+    output_path::String=string(splitext(input_pdf)[1], "_OCR",
+        ".pdf"); apply_unpaper::Bool=false,
+    ntasks::Int=Sys.CPU_THREADS - 1, tesseract_nthreads::Int=1,
+    keep_intermediates::Bool=false,
+    tmp::String=get_scratch_dir(input_pdf), quiet::Bool=false,
+    logfile::Union{Nothing,String}=nothing, force::Bool=false,
+    exit_on_error=false)
     if apply_unpaper && !CAN_USE_UNPAPER
         if Sys.ARCH == :aarch64
-            argument_error("Cannot use `unpaper` on `aarch64` systems")
+            argument_error("Cannot use `unpaper` on `aarch64` systems"; exit_on_error)
         else
-            argument_error("`unpaper` is not available on this system")
+            argument_error("`unpaper` is not available on this system"; exit_on_error)
         end
     end
     # some of these are redundant with checks inside `ocr`; that's because we want to do them before the "Starting to ocr" message,
     # and we want them to exit if they fail in a non-interactive context, instead of printing a stacktracee.
-    isfile(input_pdf) || argument_error("Input file not found at `$(input_pdf)`")
-    force || require_no_file(output_path)
-    require_extension(input_pdf, ".pdf")
-    require_extension(output_path, ".pdf")
+    isfile(input_pdf) ||
+        argument_error("Input file not found at `$(input_pdf)`"; exit_on_error)
+    force || require_no_file(output_path; exit_on_error)
+    require_extension(input_pdf, ".pdf"; exit_on_error)
+    require_extension(output_path, ".pdf"; exit_on_error)
     if logfile !== nothing
-        force || require_no_file(logfile)
-        require_extension(logfile, ".csv")
+        force || require_no_file(logfile; exit_on_error)
+        require_extension(logfile, ".csv"; exit_on_error)
     end
     verbose = !quiet
     verbose &&
         println("Starting to ocr `$(input_pdf)`; result will be located at `$(output_path)`.")
     result = ocr(input_pdf, output_path; apply_unpaper, ntasks, tesseract_nthreads,
-                 cleanup_after=!keep_intermediates, cleanup_at_exit=!keep_intermediates,
-                 tmp, verbose, force)
+        cleanup_after=!keep_intermediates, cleanup_at_exit=!keep_intermediates,
+        tmp, verbose, force, exit_on_error)
     verbose && println("\nOutput is located at `$(output_path)`.")
     if keep_intermediates && verbose
         println("Intermediate files located at `$tmp`.")
@@ -370,5 +379,7 @@ end
 @static if isdefined(Base, Symbol("@main"))
     @main
 end
+
+precompile(main, (Vector{String},))
 
 end # module
