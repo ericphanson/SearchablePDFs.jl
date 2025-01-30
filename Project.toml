@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DocOpt = "968ba79b-81e4-546f-ab3a-2eecfa62a9db"
 OutputCollectors = "6c11c7d4-943b-4e2b-80de-f2cfc2930a8c"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Poppler_jll = "9c32591e-4766-534b-9725-b71a8799265b"
@@ -17,6 +18,7 @@ unpaper_jll = "d52248c9-e08a-51c2-9066-05d0bf3e6245"
 [compat]
 Aqua = "0.5"
 CSV = "0.10"
+DocOpt = "0.5.0"
 OutputCollectors = "0.1.1"
 Poppler_jll = "21.9"
 ProgressMeter = "1.5"
@@ -31,3 +33,5 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Aqua", "Test"]
+
+[apps.searchable-pdf]
