@@ -246,6 +246,8 @@ end
 ##### CLI interface
 #####
 
+CAN_USE_UNPAPER::Bool = unpaper_jll.is_available() && Sys.ARCH != :aarch64
+
 """
 Create a searchable version of a PDF.
 """
@@ -256,6 +258,13 @@ function searchable(input_pdf::String,
     keep_intermediates::Bool=false,
     tmp::String=get_scratch_dir(input_pdf), quiet::Bool=false,
     logfile::Union{Nothing,String}=nothing, force::Bool=false)
+    if apply_unpaper && !CAN_USE_UNPAPER
+        if Sys.ARCH == :aarch64
+            argument_error("Cannot use `unpaper` on `aarch64` systems")
+        else
+            argument_error("`unpaper` is not available on this system")
+        end
+    end
     # some of these are redundant with checks inside `ocr`; that's because we want to do them before the "Starting to ocr" message,
     # and we want them to exit if they fail in a non-interactive context, instead of printing a stacktracee.
     isfile(input_pdf) || argument_error("Input file not found at `$(input_pdf)`")

@@ -7,11 +7,13 @@ using Aqua
 TEST_PDF_PATH = joinpath(@__DIR__, "test.pdf")
 TEST_PDF_RASTERIZED_PATH = joinpath(@__DIR__, "test_rasterized.pdf")
 
+unpaper_settings = SearchablePDFs.CAN_USE_UNPAPER ? (true, false) : (false,)
+
 @testset "SearchablePDFs.jl" begin
     @test SearchablePDFs.num_pages(TEST_PDF_PATH) == 3
 
     @testset "verbose=$verbose apply_unpaper=$apply_unpaper f=$f opt=$opt" for verbose in (false, true),
-        apply_unpaper in (false, true),
+        apply_unpaper in unpaper_settings,
         f in (searchable, ocr),
         opt in (true, false)
 
