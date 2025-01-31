@@ -48,6 +48,10 @@ If you use [`juliaup`](https://github.com/JuliaLang/juliaup) you can install 1.1
 ```sh
 JULIA_LOAD_PATH="@:@stdlib" julia +nightly --startup-file=no -e 'using Pkg; Pkg.activate(temp=true); Pkg.Apps.add(url="https://github.com/ericphanson/SearchablePDFs.jl")'
 ```
-to install a CLI executable `searchable-pdf`. You can re-run this to update it.
+to install a CLI executable `searchable-pdf` to the `bin` directory in your Julia depot (`~/.julia` by default). You will likely need to add your bin directory to your PATH, e.g.
+```sh
+export PATH="/Users/eph/.julia/bin:$PATH"
+```
+which can go in a shell startup script (e.g. `~/.bashrc` or `~/.zshrc`).
 
-Here, we use `JULIA_LOAD_PATH` to ensure the global environment is not used.
+You can re-run this command to update it.
