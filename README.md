@@ -32,7 +32,6 @@ It more-or-less works on MacOS (both Intel and Apple Silicon) and Linux.
 Next steps:
 
 * Allow choice of training data used for tesseract
-* Look at what settings should be used for `unpaper`
 * Robustify and test on more files
 * Add better tests?
 
