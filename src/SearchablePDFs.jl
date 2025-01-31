@@ -11,7 +11,6 @@ using CSV
 using DocOpt
 
 using Poppler_jll
-using unpaper_jll
 using Tesseract_jll
 
 export ocr
@@ -117,14 +116,6 @@ function get_images(pdf, page_range::UnitRange{Int}, tmp, total_pages; exit_on_e
     return paths, (; binary="pdftoppm", logs...)
 end
 
-# Clean up an image with unpaper
-function unpaper(img; exit_on_error)
-    img_base, img_ext = splitext(img)
-    img_unpaper = img_base * "_unpaper" * img_ext
-    logs = run_and_collect_logs(`$(unpaper_jll.unpaper()) $img $img_unpaper`; exit_on_error)
-    return (; img_unpaper, logs=(; binary="unpaper", logs...))
-end
-
 #####
 ##### Step 2: Use tesseract to generate a one-page searchable PDF from an image
 #####
@@ -178,7 +169,7 @@ end
 #####
 
 """
-    ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper=false,
+    ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf");
              ntasks=Sys.CPU_THREADS - 1, tesseract_nthreads=1, pages=num_pages(pdf),
              cleanup_after=true, cleanup_at_exit=true, tmp=get_scratch_dir(pdf),
              verbose=true)
@@ -189,14 +180,13 @@ Keyword arguments:
 
 * `ntasks`: how many parallel tasks to use for launching `tesseract` and `pdftoppm`.
 * `tesseract_nthreads`: how many threads to direct Tesseract to use
-* `apply_unpaper`: whether or not to apply `unpaper` to try to improve the image quality
 * `tmp`: a directory to store intermediate files. This directory is deleted at the end of the function if `cleanup_after` is set to `true`, and when the Julia session is ended if `cleanup_at_exit` is set to `true`.
 * `pages=nothing`: the number of pages of the PDF to process; the default of `nothing` indicates all pages in the PDF. It can help in debugging to set this to something small.
 * `verbose`: show a progress bar for each step of the process.
 
 Set `ENV["JULIA_DEBUG"] = SearchablePDFs` to see (many) debug messages.
 """
-function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_unpaper=false,
+function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf");
              ntasks=Sys.CPU_THREADS - 1, tesseract_nthreads=1, pages=nothing,
              cleanup_after=true, cleanup_at_exit=true, tmp=get_scratch_dir(pdf),
              verbose=true, force=false, max_files_per_unite=100,
@@ -240,10 +230,6 @@ function ocr(pdf, output_path=string(splitext(pdf)[1], "_OCR", ".pdf"); apply_un
     ocr_prog = Progress(pages; desc="(2/3) OCRing: ", enabled=verbose)
     pdfs = asyncmap(enumerate(img_paths); ntasks) do (page, img)
         @debug "img" page img
-        if apply_unpaper
-            img, unpaper_logs = unpaper(img; exit_on_error)
-            put!(all_logs, (; page, unpaper_logs...))
-        end
         pdf, tesseract_logs = make_pdf(img; tesseract_nthreads, exit_on_error)
         put!(all_logs, (; page, tesseract_logs...))
         next!(ocr_prog)
@@ -272,19 +258,16 @@ end
 ##### CLI interface
 #####
 
-CAN_USE_UNPAPER::Bool = unpaper_jll.is_available() && Sys.ARCH != :aarch64
-
 doc::String = """Searchable PDFs (OCR).
 
 Usage:
-  searchable-pdf <input_pdf> [<output_path>] [--apply_unpaper] [--keep_intermediates] [--quiet] [--force] [--logfile=<logfile>] [--tmp=<tmp>] [-n=<ntasks>] [-t=<tesseract_nthreads>]
+  searchable-pdf <input_pdf> [<output_path>] [--keep_intermediates] [--quiet] [--force] [--logfile=<logfile>] [--tmp=<tmp>] [-n=<ntasks>] [-t=<tesseract_nthreads>]
   searchable-pdf -h | --help
   searchable-pdf --version
 
 Options:
   -h --help        Show this screen.
   --version        Show version.
-  --apply_unpaper  todo
   --keep_intermediates  xyz
   --quiet           todo
   --force           todo
@@ -310,7 +293,6 @@ function main(args=ARGS)
 
     tesseract_nthreads = parse(Int, parsed["--tesseract_nthreads"])
     result = _main(input_pdf, output_path;
-                   apply_unpaper=parsed["--apply_unpaper"],
                    ntasks,
                    tesseract_nthreads,
                    keep_intermediates=parsed["--keep_intermediates"],
@@ -334,19 +316,12 @@ end
 
 function _main(input_pdf::String,
                output_path::String=string(splitext(input_pdf)[1], "_OCR",
-                                          ".pdf"); apply_unpaper::Bool=false,
+                                          ".pdf");
                ntasks::Int=Sys.CPU_THREADS - 1, tesseract_nthreads::Int=1,
                keep_intermediates::Bool=false,
                tmp::String=get_scratch_dir(input_pdf), quiet::Bool=false,
                logfile::Union{Nothing,String}=nothing, force::Bool=false,
                exit_on_error=false)
-    if apply_unpaper && !CAN_USE_UNPAPER
-        if Sys.ARCH == :aarch64
-            argument_error("Cannot use `unpaper` on `aarch64` systems"; exit_on_error)
-        else
-            argument_error("`unpaper` is not available on this system"; exit_on_error)
-        end
-    end
     # some of these are redundant with checks inside `ocr`; that's because we want to do them before the "Starting to ocr" message,
     # and we want them to exit if they fail in a non-interactive context, instead of printing a stacktracee.
     isfile(input_pdf) ||
@@ -361,7 +336,7 @@ function _main(input_pdf::String,
     verbose = !quiet
     verbose &&
         println("Starting to ocr `$(input_pdf)`; result will be located at `$(output_path)`.")
-    result = ocr(input_pdf, output_path; apply_unpaper, ntasks, tesseract_nthreads,
+    result = ocr(input_pdf, output_path; ntasks, tesseract_nthreads,
                  cleanup_after=!keep_intermediates, cleanup_at_exit=!keep_intermediates,
                  tmp, verbose, force, exit_on_error)
     verbose && println("\nOutput is located at `$(output_path)`.")

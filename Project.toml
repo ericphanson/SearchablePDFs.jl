@@ -13,22 +13,22 @@ ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Scratch = "6c6a2e73-6563-6170-7368-637461726353"
 Tesseract_jll = "efd95c89-babc-5260-8753-618084eaf9d7"
-unpaper_jll = "d52248c9-e08a-51c2-9066-05d0bf3e6245"
 
 [compat]
 Aqua = "0.8"
 CSV = "0.10"
 DocOpt = "0.5.0"
 OutputCollectors = "0.1.1"
+Pkg = "1"
 Poppler_jll = "21.9"
 ProgressMeter = "1.5"
+Random = "1"
 Scratch = "1"
 Tesseract_jll = "4.1.100"
-julia = "1.10"
-unpaper_jll = "6.1.100"
 Test = "1"
-Random = "1"
-Pkg = "1"
+julia = "1.10"
+
+[apps.searchable-pdf]
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
@@ -36,5 +36,3 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Aqua", "Test"]
-
-[apps.searchable-pdf]
