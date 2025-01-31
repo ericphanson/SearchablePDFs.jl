@@ -10,6 +10,8 @@ using Scratch
 using CSV
 using DocOpt
 
+using PrecompileTools: @setup_workload, @compile_workload
+
 using Poppler_jll
 using Tesseract_jll
 
@@ -258,7 +260,7 @@ end
 ##### CLI interface
 #####
 
-doc::String = """Searchable PDFs (OCR).
+const doc = """Searchable PDFs (OCR).
 
 Usage:
   searchable-pdf <input_pdf> [<output_path>] [--keep_intermediates] [--quiet] [--force] [--logfile=<logfile>] [--tmp=<tmp>] [-n=<ntasks>] [-t=<tesseract_nthreads>]
@@ -291,7 +293,7 @@ function main(args=ARGS)
         ntasks = parse(Int, parsed["--ntasks"])
     end
 
-    tesseract_nthreads = parse(Int, parsed["--tesseract_nthreads"])
+    tesseract_nthreads = parse(Int, something(get(parsed, "--tesseract_nthreads", nothing), "1"))
     result = _main(input_pdf, output_path;
                    ntasks,
                    tesseract_nthreads,
@@ -357,5 +359,15 @@ end
 end
 
 precompile(main, (Vector{String},))
+
+@setup_workload begin
+    @compile_workload begin
+        docopt(doc, ["test/test.pdf", "--quiet"])
+        # Could actually run it...
+        # mktempdir() do tmp 
+        #     main([joinpath(pkgdir(SearchablePDFs), "test", "test.pdf"), "$tmp/pdf.pdf", "--quiet"])
+        # end
+    end
+end
 
 end # module
