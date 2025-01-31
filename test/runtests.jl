@@ -11,13 +11,13 @@ TEST_PDF_RASTERIZED_PATH = joinpath(@__DIR__, "test_rasterized.pdf")
     @test SearchablePDFs.num_pages(TEST_PDF_PATH; exit_on_error=false) == 3
 
     @testset "verbose=$verbose f=$f opt=$opt" for verbose in
-                                                                               (false,
-                                                                                true),
-                                                                               f in
-                                                                               (_main,
-                                                                                ocr),
-                                                                               opt in
-                                                                               (true, false)
+                                                  (false,
+                                                   true),
+                                                  f in
+                                                  (_main,
+                                                   ocr),
+                                                  opt in
+                                                  (true, false)
 
         kwargs = f === _main ?
                  (; logfile=joinpath(@__DIR__, "test_logs.csv"), quiet=!verbose,
