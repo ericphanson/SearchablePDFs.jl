@@ -32,7 +32,6 @@ It more-or-less works on MacOS (both Intel and Apple Silicon) and Linux.
 Next steps:
 
 * Allow choice of training data used for tesseract
-* Look at what settings should be used for `unpaper`
 * Robustify and test on more files
 * Add better tests?
 
@@ -42,6 +41,11 @@ Next steps:
 using SearchablePDFs
 file = ocr("test/test_rasterized.pdf")
 ```
-or use `searchable`.
 
-TODO- CLI using `@main`.
+Supports `@main` and on v1.12 an app `searchable-pdf`.
+
+If you use [`juliaup`](https://github.com/JuliaLang/juliaup) you can install 1.12 with `juliaup add nightly`, then run
+```sh
+julia +nightly --startup-file=no -e 'using Pkg; Pkg.Apps.add(url="https://github.com/ericphanson/SearchablePDFs.jl")'
+```
+to install a CLI executable `searchable-pdf`. You can re-run this to update it.
