@@ -266,15 +266,15 @@ Usage:
   searchable-pdf --version
 
 Options:
-  -h --help        Show this screen.
-  --version        Show version.
-  --keep_intermediates  xyz
-  --quiet           todo
-  --force           todo
-  --logfile=<logfile>    todo
-  --tmp=<tmp>             todo
-  -n <ntasks>, --ntasks=<ntasks>  todo
-  -t <tesseract_nthreads>, --tesseract_nthreads=<tesseract_nthreads>  todo [default: 1]
+  -h --help                       Show this screen.
+  --version                       Show version.
+  --keep_intermediates            Keep intermediate files.
+  --quiet                         Suppress printing.
+  --force                         Replace existing output file, if one exists.
+  --logfile=<logfile>             Store logs as a CSV file at `logfile`.
+  --tmp=<tmp>                     Specify temporary directory for outputs.
+  -n <ntasks>, --ntasks=<ntasks>  Number of tasks to use.
+  -t <tesseract_nthreads>, --tesseract_nthreads=<tesseract_nthreads> Number of threads to ask tesseract to use. [default: 1]
 
 """
 
