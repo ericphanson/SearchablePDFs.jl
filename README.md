@@ -46,6 +46,8 @@ Supports `@main` and on v1.12 an app `searchable-pdf`.
 
 If you use [`juliaup`](https://github.com/JuliaLang/juliaup) you can install 1.12 with `juliaup add nightly`, then run
 ```sh
-julia +nightly --startup-file=no -e 'using Pkg; Pkg.Apps.add(url="https://github.com/ericphanson/SearchablePDFs.jl")'
+JULIA_LOAD_PATH="@:@stdlib" julia +nightly --startup-file=no -e 'using Pkg; Pkg.activate(temp=true); Pkg.Apps.add(url="https://github.com/ericphanson/SearchablePDFs.jl")'
 ```
 to install a CLI executable `searchable-pdf`. You can re-run this to update it.
+
+Here, we use `JULIA_LOAD_PATH` to ensure the global environment is not used.
